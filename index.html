@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИСОД МВД России - УМВД по г. Провинция</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h3 { margin-bottom: 15px; color: #003366; border-left: 4px solid #003366; padding-left: 12px; }
+        button { padding: 8px 16px; margin: 5px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-primary { background: #003366; color: white; }
+        .btn-primary:hover { background: #002244; transform: translateY(-1px); }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background: #ddd; color: #333; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+        .tab-btn.active { background: #003366; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #003366; color: white; position: sticky; top: 0; }
+        .badge-wanted { background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+        .badge-criminal { background: #6c757d; color: white; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+        .badge-stolen { background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; color: #666; margin-bottom: 3px; }
+        input, select, textarea { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .filter-bar { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
+        .filter-bar input { width: 200px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+        .stat { background: linear-gradient(135deg, #003366, #001a33); color: white; padding: 15px 25px; border-radius: 12px; text-align: center; min-width: 120px; }
+        .stat-value { font-size: 28px; font-weight: bold; }
+        .stat-label { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+        @media (max-width: 768px) { .form-row { flex-direction: column; } .filter-bar { flex-direction: column; align-items: stretch; } .filter-bar input { width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card" style="text-align: center; background: linear-gradient(135deg, #003366, #001a33); color: white;">
+        <h1>🏛️ ИСОД МВД России</h1>
+        <p>УМВД России по г. Провинция, Ленинградская область</p>
+        <p style="font-size: 12px; margin-top: 10px;">Интегрированная Система Обеспечения Деятельности | Версия 3.0</p>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="citizens" onclick="switchTab('citizens')">👥 Граждане</button>
+        <button class="tab-btn" data-tab="wanted" onclick="switchTab('wanted')">⚠️ Розыск</button>
+        <button class="tab-btn" data-tab="weapons" onclick="switchTab('weapons')">🔫 Оружие</button>
+        <button class="tab-btn" data-tab="criminal" onclick="switchTab('criminal')">⚖️ Криминал</button>
+        <button class="tab-btn" data-tab="vehicles" onclick="switchTab('vehicles')">🚗 ГИБДД</button>
+        <button class="tab-btn" data-tab="incidents" onclick="switchTab('incidents')">🚨 КУСП</button>
+        <button class="tab-btn" data-tab="duty" onclick="switchTab('duty')">🕐 Дежурный</button>
+        <button class="tab-btn" data-tab="documents" onclick="switchTab('documents')">📄 СЭД</button>
+        <button class="tab-btn" data-tab="logs" onclick="switchTab('logs')">📋 Журнал</button>
+    </div>
+
+    <!-- ГРАЖДАНЕ -->
+    <div id="tab-citizens" class="tab-content active">
+        <div class="card">
+            <h3>➕ Добавить гражданина</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Никнейм *</label><input type="text" id="nickname" placeholder="Killer007"></div>
+                <div class="form-group"><label>ФИО *</label><input type="text" id="fullname" placeholder="Иванов Иван Иванович"></div>
+                <div class="form-group"><label>Дата рождения</label><input type="date" id="birthdate"></div>
+                <div class="form-group"><label>Телефон</label><input type="text" id="phone" placeholder="+7 (999) 123-45-67"></div>
+                <div class="form-group"><label>Адрес</label><input type="text" id="address" placeholder="г. Провинция, ул. Ленина 1"></div>
+                <div class="form-group"><button class="btn-primary" onclick="addCitizen()">➕ Добавить</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>🔍 Поиск и фильтрация</h3>
+            <div class="filter-bar">
+                <input type="text" id="filterNickname" placeholder="Фильтр по никнейму" onkeyup="filterCitizens()">
+                <select id="sortSelect" onchange="filterCitizens()"><option value="id_desc">По ID (новые)</option><option value="id_asc">По ID (старые)</option><option value="name_asc">По ФИО (А-Я)</option><option value="name_desc">По ФИО (Я-А)</option></select>
+                <label><input type="checkbox" id="showOnlyWanted" onchange="filterCitizens()"> Только в розыске</label>
+                <label><input type="checkbox" id="showOnlyCriminal" onchange="filterCitizens()"> Только с учётом</label>
+                <button class="btn-secondary" onclick="exportToExcel('citizens')">📎 Экспорт</button>
+            </div>
+            <div class="table-wrapper"><table id="citizensTable"><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Телефон</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="citizensList"></tbody></table></div>
+        </div>
+    </div>
+
+    <!-- РОЗЫСК -->
+    <div id="tab-wanted" class="tab-content"><div class="card"><h3>⚠️ Активный розыск</h3><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Причина</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="wantedList"></tbody></table></div></div></div>
+
+    <!-- ОРУЖИЕ -->
+    <div id="tab-weapons" class="tab-content">
+        <div class="card"><h3>➕ Зарегистрировать оружие</h3><div class="form-row"><div class="form-group"><label>Серийный номер *</label><input type="text" id="weaponSerial"></div><div class="form-group"><label>Тип *</label><select id="weaponType"><option>огнестрельное</option><option>газовое</option><option>травматическое</option><option>холодное</option></select></div><div class="form-group"><label>Модель *</label><input type="text" id="weaponModel"></div><div class="form-group"><label>Калибр</label><input type="text" id="weaponCaliber"></div><div class="form-group"><label>ID владельца</label><input type="number" id="weaponOwnerId"></div><div class="form-group"><button class="btn-primary" onclick="addWeapon()">🔫 Добавить</button></div></div></div>
+        <div class="card"><h3>🔍 Поиск оружия</h3><div class="filter-bar"><input type="text" id="weaponSearch" placeholder="Серийный номер" onkeyup="searchWeapon()"><button class="btn-secondary" onclick="exportToExcel('weapons')">📎 Экспорт</button></div><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Серийный номер</th><th>Тип</th><th>Модель</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="weaponsList"></tbody></table></div></div>
+    </div>
+
+    <!-- КРИМИНАЛ -->
+    <div id="tab-criminal" class="tab-content">
+        <div class="card"><h3>⚖️ Добавить запись</h3><div class="form-row"><div class="form-group"><label>ID гражданина *</label><input type="number" id="criminalCitizenId"></div><div class="form-group"><label>Тип *</label><select id="criminalType"><option>судимость</option><option>административный</option><option>на учёте</option><option>под следствием</option></select></div><div class="form-group"><label>Статья *</label><input type="text" id="criminalArticle" placeholder="ст. 158 УК РФ"></div><div class="form-group"><label>Описание</label><input type="text" id="criminalDesc"></div></div><div class="form-row"><div class="form-group"><label>Дата преступления</label><input type="date" id="criminalDate"></div><div class="form-group"><label>Приговор</label><input type="date" id="sentenceDate"></div><div class="form-group"><label>Наказание</label><select id="sentenceType"><option>лишение свободы</option><option>условно</option><option>штраф</option></select></div><div class="form-group"><label>Срок (лет)</label><input type="number" id="sentenceYears" placeholder="0"></div><div class="form-group"><button class="btn-primary" onclick="addCriminalRecord()">⚖️ Добавить</button></div></div></div>
+        <div class="card"><h3>📋 Реестр</h3><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Гражданин</th><th>Тип</th><th>Статья</th><th>Наказание</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="criminalList"></tbody></table></div></div>
+    </div>
+
+    <!-- ГИБДД -->
+    <div id="tab-vehicles" class="tab-content">
+        <div class="card"><h3>➕ Добавить автомобиль</h3><div class="form-row"><div class="form-group"><label>Госномер *</label><input type="text" id="plateNumber"></div><div class="form-group"><label>Марка *</label><input type="text" id="brand"></div><div class="form-group"><label>Модель *</label><input type="text" id="model"></div><div class="form-group"><label>Цвет *</label><input type="text" id="color"></div><div class="form-group"><label>Год</label><input type="number" id="year"></div><div class="form-group"><label>VIN</label><input type="text" id="vin"></div><div class="form-group"><label>ID владельца</label><input type="number" id="vehicleOwnerId"></div><div class="form-group"><button class="btn-primary" onclick="addVehicle()">🚗 Добавить</button></div></div></div>
+        <div class="card"><h3>🔍 Поиск авто</h3><div class="filter-bar"><input type="text" id="plateSearch" placeholder="Госномер" onkeyup="searchVehicle()"><button class="btn-secondary" onclick="exportToExcel('vehicles')">📎 Экспорт</button></div><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Госномер</th><th>Марка/Модель</th><th>Цвет</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="vehiclesList"></tbody></table></div></div>
+        <div class="card"><h3>📋 Нарушения ПДД</h3><div class="form-row"><div class="form-group"><label>ID нарушителя</label><input type="number" id="violationCitizenId"></div><div class="form-group"><label>Тип нарушения</label><input type="text" id="violationType" placeholder="Превышение скорости"></div><div class="form-group"><label>Штраф</label><input type="number" id="fineAmount" placeholder="500"></div><div class="form-group"><label>Баллы</label><input type="number" id="points" placeholder="0"></div><div class="form-group"><button class="btn-warning" onclick="addViolation()">📝 Выписать</button></div></div>
+        <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Нарушитель</th><th>Тип</th><th>Штраф</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="violationsList"></tbody></table></div></div>
+    </div>
+
+    <!-- КУСП -->
+    <div id="tab-incidents" class="tab-content">
+        <div class="card"><h3>➕ Создать происшествие</h3><div class="form-row"><div class="form-group"><label>Тип *</label><input type="text" id="incidentType" placeholder="Кража/ДТП"></div><div class="form-group"><label>Адрес *</label><input type="text" id="incidentAddress" placeholder="г. Провинция, ул..."></div><div class="form-group"><label>Приоритет</label><select id="incidentPriority"><option>Низкий</option><option>Средний</option><option>Высший</option></select></div><div class="form-group"><label>ID сотрудника</label><input type="number" id="incidentAssigned"></div></div><div class="form-group"><label>Описание *</label><textarea id="incidentDesc" rows="3"></textarea></div><button class="btn-primary" onclick="addIncident()">🚨 Создать</button></div>
+        <div class="card"><h3>📋 Список КУСП</h3><div class="filter-bar"><select id="incidentStatusFilter" onchange="loadIncidents()"><option value="all">Все</option><option value="Зарегистрировано">Зарегистрировано</option><option value="В работе">В работе</option><option value="Закрыто">Закрыто</option></select><button class="btn-secondary" onclick="exportToExcel('incidents')">📎 Экспорт</button></div><div class="table-wrapper"><table><thead><tr><th>Номер</th><th>Тип</th><th>Адрес</th><th>Приоритет</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="incidentsList"></tbody></table></div></div>
+    </div>
+
+    <!-- ДЕЖУРНЫЙ -->
+    <div id="tab-duty" class="tab-content">
+        <div class="card"><h3>🕐 Текущая смена</h3><div id="dutyStatus"></div><div id="dutyForm"><input type="text" id="serverId" placeholder="Server ID"><button class="btn-primary" onclick="startDuty()">Начать смену</button></div></div>
+    </div>
+
+    <!-- СЭД -->
+    <div id="tab-documents" class="tab-content">
+        <div class="card"><h3>📄 Создать документ</h3><div class="form-row"><div class="form-group"><label>Тип</label><select id="docType"><option>Приказ</option><option>Распоряжение</option><option>Рапорт</option><option>Докладная</option></select></div><div class="form-group"><label>Заголовок *</label><input type="text" id="docTitle"></div></div><div class="form-group"><label>Содержание *</label><textarea id="docContent" rows="5"></textarea></div><button class="btn-primary" onclick="addDocument()">📄 Создать</button></div>
+        <div class="card"><h3>📋 Документы</h3><div class="table-wrapper"><table><thead><tr><th>Номер</th><th>Тип</th><th>Заголовок</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="documentsList"></tbody></table></div></div>
+    </div>
+
+    <!-- ЖУРНАЛ -->
+    <div id="tab-logs" class="tab-content"><div class="card"><h3>📋 Журнал действий</h3><div class="table-wrapper"><table><thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Детали</th></tr></thead><tbody id="logsList"></tbody></table></div></div></div>
+</div>
+
+<script>
+    let allCitizens = [];
+    async function api(url, options = {}) { const res = await fetch(url, options); if (!res.ok) throw new Error((await res.json()).error); return res.json(); }
+    function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active'); document.getElementById(`tab-${tab}`).classList.add('active'); if(tab==='wanted') loadWanted(); if(tab==='weapons') loadAllWeapons(); if(tab==='criminal') loadCriminalRecords(); if(tab==='vehicles') loadAllVehicles(); if(tab==='incidents') loadIncidents(); if(tab==='documents') loadDocuments(); if(tab==='logs') loadLogs(); if(tab==='duty') loadDutyStatus(); }
+    async function loadStats() { try { const s=await api('/api/stats'); document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-value">${s.citizens}</div><div>Граждан</div></div><div class="stat"><div class="stat-value">${s.weapons}</div><div>Оружия</div></div><div class="stat"><div class="stat-value">${s.criminal}</div><div>На учёте</div></div><div class="stat"><div class="stat-value">${s.wanted}</div><div>В розыске</div></div><div class="stat"><div class="stat-value">${s.vehicles}</div><div>Авто</div></div><div class="stat"><div class="stat-value">${s.violations}</div><div>Нарушений</div></div><div class="stat"><div class="stat-value">${s.activeIncidents}</div><div>Активных КУСП</div></div>`; } catch(e){} }
+    async function loadAllCitizens() { allCitizens=await api('/api/citizens'); filterCitizens(); loadStats(); }
+    function filterCitizens(){ let f=[...allCitizens]; const n=document.getElementById('filterNickname')?.value.toLowerCase(); const w=document.getElementById('showOnlyWanted')?.checked; const c=document.getElementById('showOnlyCriminal')?.checked; const s=document.getElementById('sortSelect')?.value; if(n) f=f.filter(cit=>cit.nickname?.toLowerCase().includes(n)); if(w) f=f.filter(cit=>cit.is_wanted); if(c) f=f.filter(cit=>cit.criminal_count>0); if(s==='id_desc') f.sort((a,b)=>b.id-a.id); if(s==='id_asc') f.sort((a,b)=>a.id-b.id); if(s==='name_asc') f.sort((a,b)=>a.full_name.localeCompare(b.full_name)); if(s==='name_desc') f.sort((a,b)=>b.full_name.localeCompare(a.full_name)); document.getElementById('citizensList').innerHTML=f.map(c=>`<tr><td>${c.id}</td><td><strong>${c.nickname}</strong></td><td>${c.full_name}</td><td>${c.phone||'—'}</td><td>${c.is_wanted?'<span class="badge-wanted">⚠️ Розыск</span>':''}${c.criminal_count>0?'<span class="badge-criminal">⚖️ Учёт</span>':''}</td><td>${!c.is_wanted?`<button class="btn-danger" onclick="wantedPerson(${c.id},'${c.full_name}')">🔴 В розыск</button>`:`<button class="btn-success" onclick="unwantedPerson(${c.id})">🟢 Снять</button>`}<button class="btn-secondary" onclick="showFullInfo(${c.id})">👁️</button></td></tr>`).join(''); }
+    async function addCitizen(){ const d={nickname:document.getElementById('nickname').value,full_name:document.getElementById('fullname').value,birth_date:document.getElementById('birthdate').value,phone:document.getElementById('phone').value,address:document.getElementById('address').value}; if(!d.nickname||!d.full_name){alert('Заполните никнейм и ФИО');return;} await api('/api/citizens',{method:'POST',body:JSON.stringify(d)}); alert('✅ Добавлен'); loadAllCitizens(); }
+    async function wantedPerson(id,name){ const r=prompt(`Причина розыска для ${name}:`); if(!r) return; await api(`/api/citizens/${id}/wanted`,{method:'POST',body:JSON.stringify({reason:r})}); alert('⚠️ Объявлен в розыск'); loadAllCitizens(); loadWanted(); }
+    async function unwantedPerson(id){ if(!confirm('Снять с розыска?')) return; await api(`/api/citizens/${id}/unwanted`,{method:'POST'}); alert('✅ Снят'); loadAllCitizens(); loadWanted(); }
+    async function loadWanted(){ const w=await api('/api/wanted'); document.getElementById('wantedList').innerHTML=w.map(c=>`<tr><td>${c.id}</td><td>${c.nickname}</td><td>${c.full_name}</td><td>${c.wanted_reason||'—'}</td><td>${new Date(c.wanted_since).toLocaleDateString()}</td><td><button class="btn-success" onclick="unwantedPerson(${c.id})">✅ Снять</button></td></tr>`).join(''); }
+    async function loadAllWeapons(){ const w=await api('/api/weapons'); document.getElementById('weaponsList').innerHTML=w.map(w=>`<tr><td>${w.id}</td><td>${w.serial_number}</td><td>${w.weapon_type}</td><td>${w.model}</td><td>${w.owner_name||'—'}</td><td>${w.is_stolen?'<span class="badge-stolen">⚠️ УГОН</span>':'✅ На месте'}</td><td>${!w.is_stolen?`<button class="btn-danger" onclick="reportStolenWeapon(${w.id})">🔫 В угон</button>`:`<button class="btn-success" onclick="unstolenWeapon(${w.id})">✅ Найдено</button>`}</td></tr>`).join(''); }
+    async function searchWeapon(){ const s=document.getElementById('weaponSearch').value; if(!s||s.length<2){loadAllWeapons();return;} const w=await api(`/api/weapons?serial=${s}`); document.getElementById('weaponsList').innerHTML=w.map(w=>`<tr><td>${w.id}</td><td>${w.serial_number}</td><td>${w.weapon_type}</td><td>${w.model}</td><td>${w.owner_name||'—'}</td><td>${w.is_stolen?'⚠️ УГОН':'✅'}</td><td></td></tr>`).join(''); }
+    async function addWeapon(){ const d={serial_number:document.getElementById('weaponSerial').value,weapon_type:document.getElementById('weaponType').value,model:document.getElementById('weaponModel').value,caliber:document.getElementById('weaponCaliber').value,owner_id:document.getElementById('weaponOwnerId').value||null}; if(!d.serial_number||!d.weapon_type||!d.model){alert('Заполните поля');return;} await api('/api/weapons',{method:'POST',body:JSON.stringify(d)}); alert('✅ Добавлено'); loadAllWeapons(); }
+    async function reportStolenWeapon(id){ if(confirm('Объявить в угон?')){ await api(`/api/weapons/${id}/stolen`,{method:'POST'}); alert('⚠️ Объявлено'); loadAllWeapons(); loadStats(); } }
+    async function unstolenWeapon(id){ if(confirm('Снять с угона?')){ await api(`/api/weapons/${id}/unstolen`,{method:'POST'}); alert('✅ Снято'); loadAllWeapons(); loadStats(); } }
+    async function loadCriminalRecords(){ const r=await api('/api/criminal'); document.getElementById('criminalList').innerHTML=r.map(r=>`<tr><td>${r.id}</td><td>${r.nickname}</td><td>${r.record_type}</td><td>${r.crime_article}</td><td>${r.sentence_type}${r.sentence_term_years>0?` ${r.sentence_term_years}л`:''}</td><td><span class="${r.is_active?'badge-wanted':'badge-criminal'}">${r.is_active?'Активен':'Погашен'}</span></td><td><button class="btn-success" onclick="closeCriminalRecord(${r.id})">✅ Погасить</button><button class="btn-danger" onclick="deleteCriminalRecord(${r.id})">🗑️</button></td></tr>`).join(''); }
+    async function addCriminalRecord(){ const d={citizen_id:parseInt(document.getElementById('criminalCitizenId').value),record_type:document.getElementById('criminalType').value,crime_article:document.getElementById('criminalArticle').value,crime_description:document.getElementById('criminalDesc').value,crime_date:document.getElementById('criminalDate').value||null,sentence_date:document.getElementById('sentenceDate').value||null,sentence_type:document.getElementById('sentenceType').value,sentence_term_years:parseInt(document.getElementById('sentenceYears').value)||0}; if(!d.citizen_id||!d.record_type||!d.crime_article){alert('Заполните поля');return;} await api('/api/criminal',{method:'POST',body:JSON.stringify(d)}); alert('✅ Добавлено'); loadCriminalRecords(); loadAllCitizens(); }
+    async function closeCriminalRecord(id){ if(confirm('Погасить?')){ await api(`/api/criminal/${id}/close`,{method:'PUT'}); alert('✅ Погашено'); loadCriminalRecords(); loadAllCitizens(); } }
+    async function deleteCriminalRecord(id){ if(confirm('Удалить?')){ await api(`/api/criminal/${id}`,{method:'DELETE'}); alert('🗑️ Удалено'); loadCriminalRecords(); loadAllCitizens(); } }
+    async function loadAllVehicles(){ const v=await api('/api/vehicles'); document.getElementById('vehiclesList').innerHTML=v.map(v=>`<tr><td>${v.id}</td><td><strong>${v.plate_number}</strong></td><td>${v.brand} ${v.model}</td><td>${v.color}</td><td>${v.owner_name||'—'}</td><td>${v.is_stolen?'<span class="badge-stolen">⚠️ УГОН</span>':'✅'}</td><td>${!v.is_stolen?`<button class="btn-danger" onclick="reportStolenVehicle(${v.id})">🚗 В угон</button>`:`<button class="btn-success" onclick="unstolenVehicle(${v.id})">✅ Найдено</button>`}</td></tr>`).join(''); loadStats(); }
+    async function searchVehicle(){ const p=document.getElementById('plateSearch').value; if(!p||p.length<2){loadAllVehicles();return;} const v=await api(`/api/vehicles?plate=${p}`); document.getElementById('vehiclesList').innerHTML=v.map(v=>`<tr><td>${v.id}</td><td>${v.plate_number}</td><td>${v.brand} ${v.model}</td><td>${v.color}</td><td>${v.owner_name||'—'}</td><td>${v.is_stolen?'⚠️':'✅'}</td><td></td></tr>`).join(''); }
+    async function addVehicle(){ const d={plate_number:document.getElementById('plateNumber').value,brand:document.getElementById('brand').value,model:document.getElementById('model').value,color:document.getElementById('color').value,year:document.getElementById('year').value||null,vin:document.getElementById('vin').value||null,owner_id:document.getElementById('vehicleOwnerId').value||null}; if(!d.plate_number||!d.brand||!d.model||!d.color){alert('Заполните поля');return;} await api('/api/vehicles',{method:'POST',body:JSON.stringify(d)}); alert('✅ Добавлено'); loadAllVehicles(); }
+    async function reportStolenVehicle(id){ if(confirm('Объявить в угон?')){ await api(`/api/vehicles/${id}/stolen`,{method:'POST',body:JSON.stringify({description:'Угон'})}); alert('⚠️ Объявлено'); loadAllVehicles(); loadStats(); } }
+    async function unstolenVehicle(id){ if(confirm('Снять с угона?')){ await api(`/api/vehicles/${id}/unstolen`,{method:'POST'}); alert('✅ Снято'); loadAllVehicles(); loadStats(); } }
+    async function addViolation(){ const d={citizen_id:parseInt(document.getElementById('violationCitizenId').value)||null,violation_type:document.getElementById('violationType').value,fine_amount:parseFloat(document.getElementById('fineAmount').value)||0,points:parseInt(document.getElementById('points').value)||0}; if(!d.violation_type){alert('Введите тип нарушения');return;} await api('/api/violations',{method:'POST',body:JSON.stringify(d)}); alert('✅ Штраф выписан'); loadViolations(); }
+    async function loadViolations(){ const v=await api('/api/violations'); document.getElementById('violationsList').innerHTML=v.map(v=>`<tr><td>${v.id}</td><td>${v.citizen_nickname||'—'}</td><td>${v.violation_type}</td><td>${v.fine_amount}₽</td><td>${v.is_paid?'✅ Оплачен':'❌ Не оплачен'}</td><td>${!v.is_paid?`<button class="btn-success" onclick="payViolation(${v.id})">💰 Оплатить</button>`:''}</td></tr>`).join(''); }
+    async function payViolation(id){ await api(`/api/violations/${id}/pay`,{method:'PUT'}); alert('✅ Штраф оплачен'); loadViolations(); loadStats(); }
+    async function loadIncidents(){ const s=document.getElementById('incidentStatusFilter')?.value||'all'; const i=await api(`/api/incidents?status=${s}`); document.getElementById('incidentsList').innerHTML=i.map(i=>`<tr><td>${i.kusp_number}</td><td>${i.incident_type}</td><td>${i.address}</td><td><span class="${i.priority==='Высший'?'badge-wanted':'badge-criminal'}">${i.priority}</span></td><td>${i.status}</td><td>${i.status!=='Закрыто'?`<select onchange="updateIncidentStatus(${i.id},this.value)"><option>Зарегистрировано</option><option>В работе</option><option>Закрыто</option></select>`:'—'}</td></tr>`).join(''); }
+    async function addIncident(){ const d={incident_type:document.getElementById('incidentType').value,address:document.getElementById('incidentAddress').value,description:document.getElementById('incidentDesc').value,priority:document.getElementById('incidentPriority').value,assigned_to:parseInt(document.getElementById('incidentAssigned').value)||null}; if(!d.incident_type||!d.address||!d.description){alert('Заполните поля');return;} await api('/api/incidents',{method:'POST',body:JSON.stringify(d)}); alert('✅ Создано'); loadIncidents(); loadStats(); }
+    async function updateIncidentStatus(id,s){ await api(`/api/incidents/${id}/status`,{method:'PUT',body:JSON.stringify({status:s})}); alert('✅ Статус обновлён'); loadIncidents(); loadStats(); }
+    async function loadDutyStatus(){ try{ const d=await api('/api/duty/active'); if(d){ document.getElementById('dutyStatus').innerHTML=`<p><strong>Дежурный:</strong> ${d.full_name}</p><p><strong>Server ID:</strong> ${d.server_id}</p><p><strong>Начало:</strong> ${new Date(d.started_at).toLocaleString()}</p><button class="btn-danger" onclick="endDuty()">Завершить смену</button>`; document.getElementById('dutyForm').style.display='none'; } else { document.getElementById('dutyStatus').innerHTML='<p>Нет активной смены</p>'; document.getElementById('dutyForm').style.display='block'; } } catch(e){} }
+    async function startDuty(){ const s=document.getElementById('serverId').value; if(!s){alert('Введите Server ID');return;} await api('/api/duty/start',{method:'POST',body:JSON.stringify({server_id:s,user_id:1})}); alert('✅ Смена начата'); loadDutyStatus(); }
+    async function endDuty(){ if(confirm('Завершить смену?')){ await api('/api/duty/end',{method:'POST',body:JSON.stringify({user_id:1})}); alert('✅ Смена завершена'); loadDutyStatus(); } }
+    async function loadDocuments(){ const d=await api('/api/documents'); document.getElementById('documentsList').innerHTML=d.map(d=>`<tr><td>${d.doc_number}</td><td>${d.doc_type}</td><td>${d.title}</td><td>${d.status}</td><td>${d.status==='Черновик'?`<button class="btn-success" onclick="signDocument(${d.id})">✍️ Подписать</button>`:'—'}</td></tr>`).join(''); }
+    async function addDocument(){ const d={doc_type:document.getElementById('docType').value,title:document.getElementById('docTitle').value,content:document.getElementById('docContent').value}; if(!d.title||!d.content){alert('Заполните поля');return;} await api('/api/documents',{method:'POST',body:JSON.stringify(d)}); alert('✅ Документ создан'); loadDocuments(); }
+    async function signDocument(id){ await api(`/api/documents/${id}/sign`,{method:'PUT'}); alert('✅ Подписан'); loadDocuments(); }
+    async function loadLogs(){ const l=await api('/api/logs?limit=100'); document.getElementById('logsList').innerHTML=l.map(l=>`<tr><td>${new Date(l.created_at).toLocaleString()}</td><td>${l.user_nickname||'Система'}</td><td>${l.action}</td><td>${l.details||'—'}</td></tr>`).join(''); }
+    async function showFullInfo(id){ const c=await api(`/api/citizens/${id}`); alert(`📋 ${c.full_name}\nНикнейм: ${c.nickname}\nПаспорт: ${c.passport_number}\nТелефон: ${c.phone||'—'}\nАдрес: ${c.address||'—'}\n🔫 Оружие: ${c.weapons?.length||0} ед.\n🚗 Авто: ${c.vehicles?.length||0} ед.\n⚖️ Судимости: ${c.criminal?.length||0}\n⚠️ Штрафы: ${c.violations?.filter(v=>!v.is_paid).length||0} неоплаченных`); }
+    async function exportToExcel(type){ const data=await api(`/api/${type}`); const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,type); XLSX.writeFile(wb,`${type}_${new Date().toISOString().slice(0,19)}.xlsx`); }
+    loadAllCitizens(); loadViolations();
+</script>
+</body>
+</html>
