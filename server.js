@@ -22,15 +22,177 @@ async function logAction(userId, action, entityType, entityId, details = null) {
     } catch(e) { console.error('Log error:', e); }
 }
 
+// ========== АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ТАБЛИЦ ==========
+async function createTables() {
+    const client = await pool.connect();
+    try {
+        // 1. ГРАЖДАНЕ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS citizens (
+                id SERIAL PRIMARY KEY,
+                nickname VARCHAR(100) UNIQUE NOT NULL,
+                full_name VARCHAR(255) NOT NULL,
+                birth_date DATE,
+                phone VARCHAR(20),
+                address TEXT,
+                passport_number VARCHAR(20) UNIQUE,
+                is_wanted BOOLEAN DEFAULT FALSE,
+                wanted_reason TEXT,
+                wanted_since TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица citizens готова');
+
+        // 2. ОРУЖИЕ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS weapons (
+                id SERIAL PRIMARY KEY,
+                serial_number VARCHAR(50) UNIQUE NOT NULL,
+                weapon_type VARCHAR(50) NOT NULL,
+                model VARCHAR(100) NOT NULL,
+                caliber VARCHAR(20),
+                owner_id INTEGER REFERENCES citizens(id) ON DELETE SET NULL,
+                license_number VARCHAR(50),
+                is_stolen BOOLEAN DEFAULT FALSE,
+                stolen_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица weapons готова');
+
+        // 3. КРИМИНАЛЬНЫЙ РЕЕСТР
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS criminal_records (
+                id SERIAL PRIMARY KEY,
+                citizen_id INTEGER REFERENCES citizens(id) ON DELETE CASCADE,
+                record_type VARCHAR(50) NOT NULL,
+                crime_article VARCHAR(50) NOT NULL,
+                crime_description TEXT,
+                crime_date DATE,
+                sentence_date DATE,
+                sentence_type VARCHAR(100),
+                sentence_term_years INTEGER DEFAULT 0,
+                sentence_term_months INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                court_name VARCHAR(255),
+                case_number VARCHAR(50),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица criminal_records готова');
+
+        // 4. ЖУРНАЛ ДЕЙСТВИЙ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS action_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                action VARCHAR(100) NOT NULL,
+                entity_type VARCHAR(50),
+                entity_id INTEGER,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица action_logs готова');
+
+        // 5. ГИБДД: АВТОМОБИЛИ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS vehicles (
+                id SERIAL PRIMARY KEY,
+                plate_number VARCHAR(20) UNIQUE NOT NULL,
+                brand VARCHAR(100) NOT NULL,
+                model VARCHAR(100) NOT NULL,
+                color VARCHAR(50) NOT NULL,
+                year INTEGER,
+                vin VARCHAR(17),
+                owner_id INTEGER REFERENCES citizens(id) ON DELETE SET NULL,
+                is_stolen BOOLEAN DEFAULT FALSE,
+                stolen_at TIMESTAMP,
+                stolen_description TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица vehicles готова');
+
+        // 6. ГИБДД: НАРУШЕНИЯ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS traffic_violations (
+                id SERIAL PRIMARY KEY,
+                violation_number VARCHAR(50) UNIQUE,
+                citizen_id INTEGER REFERENCES citizens(id) ON DELETE SET NULL,
+                vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL,
+                violation_type VARCHAR(100) NOT NULL,
+                violation_date TIMESTAMP DEFAULT NOW(),
+                location TEXT,
+                fine_amount DECIMAL(10,2),
+                points INTEGER DEFAULT 0,
+                is_paid BOOLEAN DEFAULT FALSE,
+                description TEXT,
+                officer_name VARCHAR(255),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Таблица traffic_violations готова');
+
+        // 7. КУСП: ПРОИСШЕСТВИЯ
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS incidents (
+                id SERIAL PRIMARY KEY,
+                kusp_number VARCHAR(50) UNIQUE,
+                incident_type VARCHAR(100) NOT NULL,
+                address TEXT NOT NULL,
+                description TEXT NOT NULL,
+                priority VARCHAR(20) DEFAULT 'Средний',
+                status VARCHAR(20) DEFAULT 'Зарегистрировано',
+                assigned_to INTEGER REFERENCES citizens(id),
+                created_by INTEGER REFERENCES citizens(id),
+                created_at TIMESTAMP DEFAULT NOW(),
+                closed_at TIMESTAMP
+            )
+        `);
+        console.log('✅ Таблица incidents готова');
+
+        // 8. ДЕЖУРНАЯ СМЕНА
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS duty_shifts (
+                id SERIAL PRIMARY KEY,
+                shift_number VARCHAR(50) UNIQUE,
+                server_id VARCHAR(100) NOT NULL,
+                user_id INTEGER REFERENCES citizens(id),
+                started_at TIMESTAMP DEFAULT NOW(),
+                ended_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        `);
+        console.log('✅ Таблица duty_shifts готова');
+
+        // 9. ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
+        await client.query(`
+            INSERT INTO citizens (nickname, full_name, passport_number) 
+            VALUES ('system', 'Система', '0000 000000') 
+            ON CONFLICT (nickname) DO NOTHING
+        `);
+        console.log('✅ Тестовый пользователь создан');
+
+        console.log('🎉 ВСЕ ТАБЛИЦЫ ГОТОВЫ!');
+    } catch(e) {
+        console.error('❌ Ошибка создания таблиц:', e.message);
+    } finally {
+        client.release();
+    }
+}
+
 // ========== ГРАЖДАНЕ ==========
 app.get('/api/citizens', async (req, res) => {
     const result = await pool.query(`
         SELECT c.*, 
                (SELECT COUNT(*) FROM weapons WHERE owner_id = c.id) as weapons_count,
                (SELECT COUNT(*) FROM criminal_records WHERE citizen_id = c.id AND is_active = true) as criminal_count,
-               (SELECT COUNT(*) FROM vehicles WHERE owner_id = c.id) as vehicles_count,
-               (SELECT COUNT(*) FROM traffic_violations WHERE citizen_id = c.id AND is_paid = false) as unpaid_fines
+               (SELECT COUNT(*) FROM vehicles WHERE owner_id = c.id) as vehicles_count
         FROM citizens c 
+        WHERE c.nickname != 'system'
         ORDER BY c.id DESC
     `);
     res.json(result.rows);
@@ -39,12 +201,13 @@ app.get('/api/citizens', async (req, res) => {
 app.get('/api/citizens/search', async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 2) {
-        const result = await pool.query('SELECT * FROM citizens LIMIT 100');
+        const result = await pool.query('SELECT * FROM citizens WHERE nickname != \'system\' LIMIT 100');
         return res.json(result.rows);
     }
     const result = await pool.query(
         `SELECT * FROM citizens 
-         WHERE full_name ILIKE $1 OR nickname ILIKE $1 OR phone ILIKE $1 OR passport_number ILIKE $1
+         WHERE (full_name ILIKE $1 OR nickname ILIKE $1 OR phone ILIKE $1 OR passport_number ILIKE $1)
+         AND nickname != 'system'
          LIMIT 50`,
         [`%${q}%`]
     );
@@ -80,9 +243,8 @@ app.get('/api/citizens/:id', async (req, res) => {
     const weapons = await pool.query('SELECT * FROM weapons WHERE owner_id = $1', [id]);
     const vehicles = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1', [id]);
     const criminal = await pool.query('SELECT * FROM criminal_records WHERE citizen_id = $1 AND is_active = true', [id]);
-    const violations = await pool.query('SELECT * FROM traffic_violations WHERE citizen_id = $1 ORDER BY violation_date DESC LIMIT 10', [id]);
     
-    res.json({ ...citizen.rows[0], weapons: weapons.rows, vehicles: vehicles.rows, criminal: criminal.rows, violations: violations.rows });
+    res.json({ ...citizen.rows[0], weapons: weapons.rows, vehicles: vehicles.rows, criminal: criminal.rows });
 });
 
 // ========== РОЗЫСК ==========
@@ -109,7 +271,7 @@ app.post('/api/citizens/:id/unwanted', async (req, res) => {
 
 app.get('/api/wanted', async (req, res) => {
     const result = await pool.query(
-        'SELECT * FROM citizens WHERE is_wanted = TRUE ORDER BY wanted_since DESC'
+        'SELECT * FROM citizens WHERE is_wanted = TRUE AND nickname != \'system\' ORDER BY wanted_since DESC'
     );
     res.json(result.rows);
 });
@@ -180,7 +342,7 @@ app.get('/api/criminal', async (req, res) => {
         SELECT cr.*, c.nickname, c.full_name, c.passport_number
         FROM criminal_records cr
         JOIN citizens c ON cr.citizen_id = c.id
-        WHERE cr.is_active = true
+        WHERE cr.is_active = true AND c.nickname != 'system'
         ORDER BY cr.created_at DESC
     `);
     res.json(result.rows);
@@ -196,16 +358,16 @@ app.get('/api/citizens/:id/criminal', async (req, res) => {
 });
 
 app.post('/api/criminal', async (req, res) => {
-    const { citizen_id, record_type, crime_article, crime_description, crime_date, sentence_date, sentence_type, sentence_term_years, sentence_term_months, court_name, case_number, notes } = req.body;
+    const { citizen_id, record_type, crime_article, crime_description, sentence_date, sentence_type, sentence_term_years } = req.body;
     
     if (!citizen_id || !record_type || !crime_article) {
         return res.status(400).json({ error: 'ID гражданина, тип учёта и статья обязательны' });
     }
     
     const result = await pool.query(
-        `INSERT INTO criminal_records (citizen_id, record_type, crime_article, crime_description, crime_date, sentence_date, sentence_type, sentence_term_years, sentence_term_months, court_name, case_number, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [citizen_id, record_type, crime_article, crime_description, crime_date, sentence_date, sentence_type, sentence_term_years || 0, sentence_term_months || 0, court_name, case_number, notes]
+        `INSERT INTO criminal_records (citizen_id, record_type, crime_article, crime_description, sentence_date, sentence_type, sentence_term_years)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [citizen_id, record_type, crime_article, crime_description, sentence_date, sentence_type, sentence_term_years || 0]
     );
     await logAction(1, 'ДОБАВЛЕНИЕ_ЗАПИСИ', 'criminal', result.rows[0].id, `${record_type}: ${crime_article}`);
     res.json(result.rows[0]);
@@ -251,7 +413,7 @@ app.get('/api/vehicles', async (req, res) => {
 });
 
 app.post('/api/vehicles', async (req, res) => {
-    const { plate_number, brand, model, color, year, vin, owner_id } = req.body;
+    const { plate_number, brand, model, color, year, owner_id } = req.body;
     if (!plate_number || !brand || !model || !color) {
         return res.status(400).json({ error: 'Госномер, марка, модель и цвет обязательны' });
     }
@@ -260,9 +422,9 @@ app.post('/api/vehicles', async (req, res) => {
         return res.status(409).json({ error: 'Автомобиль с таким госномером уже зарегистрирован' });
     }
     const result = await pool.query(
-        `INSERT INTO vehicles (plate_number, brand, model, color, year, vin, owner_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [plate_number, brand, model, color, year || null, vin || null, owner_id || null]
+        `INSERT INTO vehicles (plate_number, brand, model, color, year, owner_id)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [plate_number, brand, model, color, year || null, owner_id || null]
     );
     await logAction(1, 'ДОБАВЛЕНИЕ_АВТО', 'vehicle', result.rows[0].id, `${brand} ${model} (${plate_number})`);
     res.json(result.rows[0]);
@@ -282,54 +444,34 @@ app.post('/api/vehicles/:id/stolen', async (req, res) => {
 app.post('/api/vehicles/:id/unstolen', async (req, res) => {
     const { id } = req.params;
     const result = await pool.query(
-        `UPDATE vehicles SET is_stolen = FALSE, stolen_at = NULL, stolen_description = NULL WHERE id = $1 RETURNING *`,
+        `UPDATE vehicles SET is_stolen = FALSE, stolen_at = NULL WHERE id = $1 RETURNING *`,
         [id]
     );
     await logAction(1, 'СНЯТИЕ_УГОНА', 'vehicle', id, 'Автомобиль найден');
     res.json(result.rows[0]);
 });
 
-app.get('/api/citizens/:id/vehicles', async (req, res) => {
-    const { id } = req.params;
-    const result = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1 ORDER BY created_at DESC', [id]);
-    res.json(result.rows);
-});
-
 // ========== ГИБДД: НАРУШЕНИЯ ==========
 app.get('/api/violations', async (req, res) => {
-    const { citizen_id, vehicle_id } = req.query;
-    let query = `
-        SELECT v.*, c.nickname as citizen_nickname, c.full_name as citizen_name,
-               ve.plate_number
+    const result = await pool.query(`
+        SELECT v.*, c.nickname as citizen_nickname
         FROM traffic_violations v
         LEFT JOIN citizens c ON v.citizen_id = c.id
-        LEFT JOIN vehicles ve ON v.vehicle_id = ve.id
-        WHERE 1=1
-    `;
-    const params = [];
-    if (citizen_id) {
-        params.push(citizen_id);
-        query += ` AND v.citizen_id = $${params.length}`;
-    }
-    if (vehicle_id) {
-        params.push(vehicle_id);
-        query += ` AND v.vehicle_id = $${params.length}`;
-    }
-    query += ` ORDER BY v.violation_date DESC LIMIT 100`;
-    const result = await pool.query(query, params);
+        ORDER BY v.violation_date DESC LIMIT 100
+    `);
     res.json(result.rows);
 });
 
 app.post('/api/violations', async (req, res) => {
-    const { citizen_id, vehicle_id, violation_type, location, fine_amount, points, description, officer_name } = req.body;
+    const { citizen_id, violation_type, fine_amount } = req.body;
     if (!violation_type) {
         return res.status(400).json({ error: 'Тип нарушения обязателен' });
     }
     const violation_number = `НАР-${Date.now()}-${Math.floor(Math.random()*1000)}`;
     const result = await pool.query(
-        `INSERT INTO traffic_violations (violation_number, citizen_id, vehicle_id, violation_type, location, fine_amount, points, description, officer_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-        [violation_number, citizen_id || null, vehicle_id || null, violation_type, location, fine_amount || 0, points || 0, description, officer_name]
+        `INSERT INTO traffic_violations (violation_number, citizen_id, violation_type, fine_amount)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [violation_number, citizen_id || null, violation_type, fine_amount || 0]
     );
     await logAction(1, 'ДОБАВЛЕНИЕ_НАРУШЕНИЯ', 'violation', result.rows[0].id, `${violation_type} на сумму ${fine_amount}₽`);
     res.json(result.rows[0]);
@@ -345,24 +487,16 @@ app.put('/api/violations/:id/pay', async (req, res) => {
     res.json(result.rows[0]);
 });
 
-// ========== КУСП (ПРОИСШЕСТВИЯ) ==========
+// ========== КУСП ==========
 app.get('/api/incidents', async (req, res) => {
     const { status } = req.query;
-    let query = `
-        SELECT i.*, 
-               a.nickname as assigned_nickname,
-               c.nickname as created_nickname
-        FROM incidents i
-        LEFT JOIN citizens a ON i.assigned_to = a.id
-        LEFT JOIN citizens c ON i.created_by = c.id
-        WHERE 1=1
-    `;
+    let query = `SELECT * FROM incidents WHERE 1=1`;
     if (status && status !== 'all') {
-        query += ` AND i.status = '${status}'`;
+        query += ` AND status = '${status}'`;
     }
     query += ` ORDER BY 
-        CASE i.priority WHEN 'Высший' THEN 1 WHEN 'Средний' THEN 2 ELSE 3 END,
-        i.created_at DESC
+        CASE priority WHEN 'Высший' THEN 1 WHEN 'Средний' THEN 2 ELSE 3 END,
+        created_at DESC
         LIMIT 100`;
     const result = await pool.query(query);
     res.json(result.rows);
@@ -430,42 +564,6 @@ app.post('/api/duty/end', async (req, res) => {
     res.json(result.rows[0] || { message: 'Нет активной смены' });
 });
 
-// ========== СЭД: ДОКУМЕНТЫ ==========
-app.get('/api/documents', async (req, res) => {
-    const result = await pool.query(`
-        SELECT d.*, c.nickname as creator_nickname
-        FROM documents d
-        LEFT JOIN citizens c ON d.created_by = c.id
-        ORDER BY d.created_at DESC LIMIT 100
-    `);
-    res.json(result.rows);
-});
-
-app.post('/api/documents', async (req, res) => {
-    const { doc_type, title, content } = req.body;
-    if (!doc_type || !title || !content) {
-        return res.status(400).json({ error: 'Тип, заголовок и содержание обязательны' });
-    }
-    const doc_number = `ДОК-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-    const result = await pool.query(
-        `INSERT INTO documents (doc_number, doc_type, title, content, created_by)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [doc_number, doc_type, title, content, 1]
-    );
-    await logAction(1, 'СОЗДАНИЕ_ДОКУМЕНТА', 'document', result.rows[0].id, `${doc_type}: ${title}`);
-    res.json(result.rows[0]);
-});
-
-app.put('/api/documents/:id/sign', async (req, res) => {
-    const { id } = req.params;
-    const result = await pool.query(
-        `UPDATE documents SET status = 'Подписан', signed_by = $1, signed_at = NOW() WHERE id = $2 RETURNING *`,
-        [1, id]
-    );
-    await logAction(1, 'ПОДПИСАНИЕ_ДОКУМЕНТА', 'document', id, 'Подписан ЭЦП');
-    res.json(result.rows[0]);
-});
-
 // ========== ЖУРНАЛ ДЕЙСТВИЙ ==========
 app.get('/api/logs', async (req, res) => {
     const { limit = 100 } = req.query;
@@ -481,37 +579,40 @@ app.get('/api/logs', async (req, res) => {
 
 // ========== СТАТИСТИКА ==========
 app.get('/api/stats', async (req, res) => {
-    const citizens = await pool.query('SELECT COUNT(*) FROM citizens');
+    const citizens = await pool.query('SELECT COUNT(*) FROM citizens WHERE nickname != \'system\'');
     const weapons = await pool.query('SELECT COUNT(*) FROM weapons');
     const criminal = await pool.query('SELECT COUNT(*) FROM criminal_records WHERE is_active = true');
     const wanted = await pool.query('SELECT COUNT(*) FROM citizens WHERE is_wanted = true');
-    const stolenWeapons = await pool.query('SELECT COUNT(*) FROM weapons WHERE is_stolen = true');
     const vehicles = await pool.query('SELECT COUNT(*) FROM vehicles');
     const stolenVehicles = await pool.query('SELECT COUNT(*) FROM vehicles WHERE is_stolen = true');
     const violations = await pool.query('SELECT COUNT(*) FROM traffic_violations');
-    const unpaidFines = await pool.query('SELECT COUNT(*) FROM traffic_violations WHERE is_paid = false');
     const activeIncidents = await pool.query("SELECT COUNT(*) FROM incidents WHERE status != 'Закрыто'");
-    const activeDuty = await pool.query('SELECT COUNT(*) FROM duty_shifts WHERE is_active = true');
-    const documents = await pool.query("SELECT COUNT(*) FROM documents WHERE status = 'Черновик'");
     
     res.json({
         citizens: parseInt(citizens.rows[0].count),
         weapons: parseInt(weapons.rows[0].count),
         criminal: parseInt(criminal.rows[0].count),
         wanted: parseInt(wanted.rows[0].count),
-        stolenWeapons: parseInt(stolenWeapons.rows[0].count),
         vehicles: parseInt(vehicles.rows[0].count),
         stolenVehicles: parseInt(stolenVehicles.rows[0].count),
         violations: parseInt(violations.rows[0].count),
-        unpaidFines: parseInt(unpaidFines.rows[0].count),
-        activeIncidents: parseInt(activeIncidents.rows[0].count),
-        activeDuty: parseInt(activeDuty.rows[0].count),
-        draftDocuments: parseInt(documents.rows[0].count)
+        activeIncidents: parseInt(activeIncidents.rows[0].count)
     });
 });
 
-// ========== ЗАПУСК ==========
+// ========== ЗАПУСК И АВТОСОЗДАНИЕ ТАБЛИЦ ==========
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`✅ ИСОД МВД России запущен на порту ${PORT}`);
+
+// Запускаем создание таблиц и потом сервер
+createTables().then(() => {
+    app.listen(PORT, () => {
+        console.log(`✅ ИСОД МВД России запущен на порту ${PORT}`);
+        console.log(`🌐 Открой: http://localhost:${PORT}`);
+    });
+}).catch(err => {
+    console.error('❌ Ошибка при создании таблиц:', err);
+    // Всё равно запускаем сервер
+    app.listen(PORT, () => {
+        console.log(`⚠️ Сервер запущен, но возможны ошибки БД: http://localhost:${PORT}`);
+    });
 });
