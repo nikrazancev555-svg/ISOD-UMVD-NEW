@@ -6,41 +6,53 @@ const app = express();
 app.use(express.json());
 app.use(express.static('.'));
 
-// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// ========== СОЗДАНИЕ ВСЕХ ТАБЛИЦ И КОЛОНОК ==========
+// ========== ПРИНУДИТЕЛЬНОЕ ДОБАВЛЕНИЕ ВСЕХ НУЖНЫХ КОЛОНОК ==========
+async function addMissingColumns() {
+    // Проверяем и добавляем колонки в таблицу citizens
+    const columns = [
+        { name: 'birth_date', type: 'DATE' },
+        { name: 'phone', type: 'VARCHAR(20)' },
+        { name: 'address', type: 'TEXT' },
+        { name: 'passport_number', type: 'VARCHAR(20)' },
+        { name: 'is_wanted', type: 'BOOLEAN DEFAULT FALSE' },
+        { name: 'wanted_reason', type: 'TEXT' },
+        { name: 'wanted_category', type: 'VARCHAR(50)' },
+        { name: 'wanted_priority', type: 'VARCHAR(50)' },
+        { name: 'wanted_since', type: 'TIMESTAMP' }
+    ];
+    
+    for (const col of columns) {
+        try {
+            await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+            console.log(`✅ Колонка ${col.name} добавлена или уже есть`);
+        } catch(e) {
+            console.log(`⚠️ Ошибка с колонкой ${col.name}:`, e.message);
+        }
+    }
+}
+
+// ========== СОЗДАНИЕ ВСЕХ ТАБЛИЦ ==========
 async function initDatabase() {
     try {
-        // 1. Граждане (полная структура)
+        // 1. Граждане (базовая таблица)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS citizens (
                 id SERIAL PRIMARY KEY,
                 nickname VARCHAR(100) UNIQUE,
                 full_name VARCHAR(255),
-                birth_date DATE,
-                phone VARCHAR(20),
-                address TEXT,
-                passport_number VARCHAR(20) UNIQUE,
-                is_wanted BOOLEAN DEFAULT FALSE,
-                wanted_reason TEXT,
-                wanted_category VARCHAR(50),
-                wanted_priority VARCHAR(50),
-                wanted_since TIMESTAMP,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
+        console.log('✅ Таблица citizens создана');
         
-        // Добавляем колонки, если их нет (для старых таблиц)
-        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_reason TEXT`);
-        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_category VARCHAR(50)`);
-        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_priority VARCHAR(50)`);
-        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_since TIMESTAMP`);
-        console.log('✅ Таблица citizens готова');
-
+        // Добавляем недостающие колонки
+        await addMissingColumns();
+        
         // 2. Оружие
         await pool.query(`
             CREATE TABLE IF NOT EXISTS weapons (
@@ -56,7 +68,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица weapons');
-
+        
         // 3. Автомобили
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vehicles (
@@ -72,7 +84,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица vehicles');
-
+        
         // 4. Происшествия КУСП
         await pool.query(`
             CREATE TABLE IF NOT EXISTS incidents (
@@ -88,7 +100,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица incidents');
-
+        
         // 5. Штрафы ПДД
         await pool.query(`
             CREATE TABLE IF NOT EXISTS traffic_violations (
@@ -102,7 +114,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица traffic_violations');
-
+        
         // 6. Криминальный реестр
         await pool.query(`
             CREATE TABLE IF NOT EXISTS criminal_records (
@@ -117,7 +129,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица criminal_records');
-
+        
         // 7. Дежурные смены
         await pool.query(`
             CREATE TABLE IF NOT EXISTS duty_shifts (
@@ -129,7 +141,7 @@ async function initDatabase() {
             )
         `);
         console.log('✅ Таблица duty_shifts');
-
+        
         console.log('🎉 ВСЕ ТАБЛИЦЫ ГОТОВЫ!');
     } catch(e) {
         console.log('⚠️ Ошибка при создании таблиц:', e.message);
@@ -144,26 +156,8 @@ app.get('/', (req, res) => {
 // ========== ГРАЖДАНЕ (ИБД-Ф) ==========
 app.get('/api/citizens', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT c.*, 
-                   (SELECT COUNT(*) FROM weapons WHERE owner_id = c.id) as weapons_count,
-                   (SELECT COUNT(*) FROM vehicles WHERE owner_id = c.id) as vehicles_count
-            FROM citizens c 
-            ORDER BY c.id DESC
-        `);
+        const result = await pool.query('SELECT * FROM citizens ORDER BY id DESC');
         res.json(result.rows);
-    } catch(e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.get('/api/citizens/:id', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM citizens WHERE id = $1', [req.params.id]);
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Не найден' });
-        const weapons = await pool.query('SELECT * FROM weapons WHERE owner_id = $1', [req.params.id]);
-        const vehicles = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1', [req.params.id]);
-        res.json({ ...result.rows[0], weapons: weapons.rows, vehicles: vehicles.rows });
     } catch(e) {
         res.status(500).json({ error: e.message });
     }
@@ -220,11 +214,7 @@ app.get('/api/citizens/search', async (req, res) => {
 // ========== РОЗЫСК (Следопыт-М) ==========
 app.get('/api/wanted', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT * FROM citizens 
-            WHERE is_wanted = TRUE 
-            ORDER BY wanted_since DESC
-        `);
+        const result = await pool.query('SELECT * FROM citizens WHERE is_wanted = TRUE ORDER BY wanted_since DESC');
         res.json(result.rows);
     } catch(e) {
         res.status(500).json({ error: e.message });
