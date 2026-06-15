@@ -6,16 +6,16 @@ const app = express();
 app.use(express.json());
 app.use(express.static('.'));
 
-// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ (ДЛЯ RAILWAY)
+// ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// ========== СОЗДАНИЕ ВСЕХ ТАБЛИЦ ==========
+// ========== СОЗДАНИЕ ВСЕХ ТАБЛИЦ И КОЛОНОК ==========
 async function initDatabase() {
     try {
-        // 1. Граждане
+        // 1. Граждане (полная структура)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS citizens (
                 id SERIAL PRIMARY KEY,
@@ -33,7 +33,13 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-        console.log('✅ Таблица citizens');
+        
+        // Добавляем колонки, если их нет (для старых таблиц)
+        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_reason TEXT`);
+        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_category VARCHAR(50)`);
+        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_priority VARCHAR(50)`);
+        await pool.query(`ALTER TABLE citizens ADD COLUMN IF NOT EXISTS wanted_since TIMESTAMP`);
+        console.log('✅ Таблица citizens готова');
 
         // 2. Оружие
         await pool.query(`
@@ -77,6 +83,7 @@ async function initDatabase() {
                 description TEXT,
                 priority VARCHAR(20),
                 status VARCHAR(20) DEFAULT 'Зарегистрировано',
+                closed_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
@@ -214,10 +221,9 @@ app.get('/api/citizens/search', async (req, res) => {
 app.get('/api/wanted', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT c.* 
-            FROM citizens c 
-            WHERE c.is_wanted = TRUE 
-            ORDER BY c.wanted_since DESC
+            SELECT * FROM citizens 
+            WHERE is_wanted = TRUE 
+            ORDER BY wanted_since DESC
         `);
         res.json(result.rows);
     } catch(e) {
