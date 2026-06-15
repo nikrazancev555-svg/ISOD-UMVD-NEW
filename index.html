@@ -1,112 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>ИСОД МВД</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИСОД МВД России</title>
     <style>
-        body { font-family: Arial; padding: 20px; }
-        input, button { padding: 10px; margin: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h3 { margin-bottom: 15px; color: #003366; border-left: 4px solid #003366; padding-left: 12px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+        .stat { background: linear-gradient(135deg, #003366, #001a33); color: white; padding: 15px 25px; border-radius: 12px; text-align: center; min-width: 120px; }
+        .stat-value { font-size: 28px; font-weight: bold; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background: #ddd; padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; }
+        .tab-btn.active { background: #003366; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #003366; color: white; }
-        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
-        .stat { background: #003366; color: white; padding: 15px; border-radius: 10px; }
-        .stat-value { font-size: 32px; font-weight: bold; }
+        input, select, textarea { padding: 8px 12px; margin: 5px; border: 1px solid #ddd; border-radius: 6px; }
+        button { padding: 8px 16px; margin: 5px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-primary { background: #003366; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .badge-wanted { background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; color: #666; margin-bottom: 3px; }
     </style>
 </head>
 <body>
-    <h1>🏛️ ИСОД МВД России</h1>
-    <p>УМВД России по г. Провинция</p>
+<div class="container">
+    <div class="card" style="text-align:center; background: linear-gradient(135deg, #003366, #001a33); color: white;">
+        <h1>🏛️ ИСОД МВД России</h1>
+        <p>УМВД России по г. Провинция, Ленинградская область</p>
+    </div>
 
     <div class="stats" id="stats"></div>
 
-    <div>
-        <h3>➕ Добавить гражданина</h3>
-        <input type="text" id="nickname" placeholder="Никнейм">
-        <input type="text" id="fullname" placeholder="ФИО">
-        <button onclick="addCitizen()">Добавить</button>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="citizens">👥 Граждане</button>
+        <button class="tab-btn" data-tab="wanted">⚠️ Розыск</button>
+        <button class="tab-btn" data-tab="weapons">🔫 Оружие</button>
+        <button class="tab-btn" data-tab="vehicles">🚗 ГИБДД</button>
+        <button class="tab-btn" data-tab="violations">💰 Штрафы</button>
+        <button class="tab-btn" data-tab="incidents">🚨 КУСП</button>
+        <button class="tab-btn" data-tab="criminal">⚖️ Криминал</button>
+        <button class="tab-btn" data-tab="duty">🕐 Дежурный</button>
     </div>
 
-    <div>
-        <h3>📋 Список граждан</h3>
-        <table>
-            <thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Паспорт</th><th>Статус</th><th>Действия</th></tr></thead>
-            <tbody id="citizensList"></tbody>
-        </table>
+    <!-- ГРАЖДАНЕ -->
+    <div id="tab-citizens" class="tab-content active">
+        <div class="card">
+            <h3>➕ Добавить гражданина</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Никнейм *</label><input type="text" id="nickname" placeholder="Killer007"></div>
+                <div class="form-group"><label>ФИО *</label><input type="text" id="fullname" placeholder="Иванов Иван"></div>
+                <div class="form-group"><label>Дата рождения</label><input type="date" id="birthdate"></div>
+                <div class="form-group"><label>Телефон</label><input type="text" id="phone" placeholder="+7..."></div>
+                <div class="form-group"><button class="btn-primary" onclick="addCitizen()">➕ Добавить</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>🔍 Поиск</h3>
+            <div class="form-row"><input type="text" id="searchInput" placeholder="Поиск по ФИО, никнейму..." style="flex:1"><button onclick="searchCitizens()">🔍 Найти</button><button onclick="loadCitizens()">📋 Все</button></div>
+            <div style="overflow-x:auto"><tr><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Паспорт</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="citizensList"></tbody></table></div>
+        </div>
     </div>
 
-    <script>
-        async function api(url, options = {}) {
-            const res = await fetch(url, options);
-            if (!res.ok) throw new Error(await res.text());
-            return res.json();
-        }
+    <!-- РОЗЫСК -->
+    <div id="tab-wanted" class="tab-content"><div class="card"><h3>⚠️ В розыске</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Причина</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="wantedList"></tbody></table></div></div></div>
 
-        async function loadStats() {
-            const stats = await api('/api/stats');
-            document.getElementById('stats').innerHTML = `
-                <div class="stat"><div class="stat-value">${stats.citizens}</div><div>Граждан</div></div>
-                <div class="stat"><div class="stat-value">${stats.wanted}</div><div>В розыске</div></div>
-            `;
-        }
+    <!-- ОРУЖИЕ -->
+    <div id="tab-weapons" class="tab-content">
+        <div class="card"><h3>➕ Добавить оружие</h3><div class="form-row"><input type="text" id="weaponSerial" placeholder="Серийный номер"><input type="text" id="weaponType" placeholder="Тип"><input type="text" id="weaponModel" placeholder="Модель"><input type="number" id="weaponOwnerId" placeholder="ID владельца"><button class="btn-primary" onclick="addWeapon()">🔫 Добавить</button></div></div>
+        <div class="card"><h3>📋 Список оружия</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Серийный номер</th><th>Тип</th><th>Модель</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="weaponsList"></tbody></table></div></div>
+    </div>
 
-        async function loadCitizens() {
-            const citizens = await api('/api/citizens');
-            document.getElementById('citizensList').innerHTML = citizens.map(c => `
-                <tr>
-                    <td>${c.id}</td>
-                    <td>${c.nickname}</td>
-                    <td>${c.full_name}</td>
-                    <td>${c.passport_number || '—'}</td>
-                    <td>${c.is_wanted ? '⚠️ В розыске' : '—'}</td>
-                    <td>
-                        ${!c.is_wanted ? 
-                            `<button onclick="wantedPerson(${c.id})">🔴 В розыск</button>` : 
-                            `<button onclick="unwantedPerson(${c.id})">✅ Снять</button>`
-                        }
-                    </td>
-                </table>
-            `).join('');
-            loadStats();
-        }
+    <!-- ГИБДД -->
+    <div id="tab-vehicles" class="tab-content">
+        <div class="card"><h3>➕ Добавить авто</h3><div class="form-row"><input type="text" id="plateNumber" placeholder="Госномер"><input type="text" id="brand" placeholder="Марка"><input type="text" id="model" placeholder="Модель"><input type="text" id="color" placeholder="Цвет"><input type="number" id="vehicleOwnerId" placeholder="ID владельца"><button class="btn-primary" onclick="addVehicle()">🚗 Добавить</button></div></div>
+        <div class="card"><h3>🚗 Автомобили</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Госномер</th><th>Марка/Модель</th><th>Цвет</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="vehiclesList"></tbody></table></div></div>
+    </div>
 
-        async function addCitizen() {
-            const nickname = document.getElementById('nickname').value;
-            const fullname = document.getElementById('fullname').value;
-            
-            if (!nickname || !fullname) {
-                alert('Заполните никнейм и ФИО');
-                return;
-            }
-            
-            try {
-                const result = await api('/api/citizens', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nickname, full_name: fullname })
-                });
-                alert('✅ Гражданин добавлен! Паспорт: ' + result.passport_number);
-                document.getElementById('nickname').value = '';
-                document.getElementById('fullname').value = '';
-                loadCitizens();
-            } catch(err) {
-                alert('Ошибка: ' + err.message);
-            }
-        }
+    <!-- ШТРАФЫ -->
+    <div id="tab-violations" class="tab-content">
+        <div class="card"><h3>📝 Выписать штраф</h3><div class="form-row"><input type="number" id="violationCitizenId" placeholder="ID нарушителя"><input type="text" id="violationType" placeholder="Тип нарушения"><input type="number" id="fineAmount" placeholder="Сумма штрафа"><button class="btn-primary" onclick="addViolation()">💰 Выписать</button></div></div>
+        <div class="card"><h3>📋 Штрафы</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Нарушитель</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="violationsList"></tbody></table></div></div>
+    </div>
 
-        async function wantedPerson(id) {
-            await api(`/api/citizens/${id}/wanted`, { method: 'POST' });
-            alert('⚠️ Объявлен в розыск');
-            loadCitizens();
-        }
+    <!-- КУСП -->
+    <div id="tab-incidents" class="tab-content">
+        <div class="card"><h3>➕ Создать происшествие</h3><div class="form-row"><input type="text" id="incidentType" placeholder="Тип"><input type="text" id="incidentAddress" placeholder="Адрес"><textarea id="incidentDesc" rows="2" placeholder="Описание"></textarea><select id="incidentPriority"><option>Низкий</option><option>Средний</option><option>Высший</option></select><button class="btn-primary" onclick="addIncident()">🚨 Создать</button></div></div>
+        <div class="card"><h3>📋 КУСП</h3><div style="overflow-x:auto"><table><thead><tr><th>Номер</th><th>Тип</th><th>Адрес</th><th>Приоритет</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="incidentsList"></tbody></table></div></div>
+    </div>
 
-        async function unwantedPerson(id) {
-            await api(`/api/citizens/${id}/unwanted`, { method: 'POST' });
-            alert('✅ Снят с розыска');
-            loadCitizens();
-        }
+    <!-- КРИМИНАЛ -->
+    <div id="tab-criminal" class="tab-content">
+        <div class="card"><h3>⚖️ Добавить запись</h3><div class="form-row"><input type="number" id="criminalCitizenId" placeholder="ID гражданина"><input type="text" id="criminalArticle" placeholder="Статья"><input type="text" id="criminalDesc" placeholder="Описание"><select id="sentenceType"><option>лишение свободы</option><option>условно</option><option>штраф</option></select><input type="number" id="sentenceYears" placeholder="Срок (лет)"><button class="btn-primary" onclick="addCriminal()">⚖️ Добавить</button></div></div>
+        <div class="card"><h3>📋 Реестр</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Гражданин</th><th>Статья</th><th>Наказание</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="criminalList"></tbody></table></div></div>
+    </div>
 
+    <!-- ДЕЖУРНЫЙ -->
+    <div id="tab-duty" class="tab-content">
+        <div class="card"><h3>🕐 Дежурная смена</h3><div id="dutyStatus"></div><div id="dutyForm"><input type="text" id="serverId" placeholder="Server ID"><button class="btn-primary" onclick="startDuty()">Начать смену</button></div></div>
+    </div>
+</div>
+
+<script>
+    async function api(url, options = {}) {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error('Ошибка');
+        return res.json();
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        if (tab === 'wanted') loadWanted();
+        if (tab === 'weapons') loadWeapons();
+        if (tab === 'vehicles') loadVehicles();
+        if (tab === 'violations') loadViolations();
+        if (tab === 'incidents') loadIncidents();
+        if (tab === 'criminal') loadCriminal();
+        if (tab === 'duty') loadDuty();
+    }
+
+    async function loadStats() {
+        const s = await api('/api/stats');
+        document.getElementById('stats').innerHTML = `
+            <div class="stat"><div class="stat-value">${s.citizens}</div><div>Граждан</div></div>
+            <div class="stat"><div class="stat-value">${s.weapons}</div><div>Оружия</div></div>
+            <div class="stat"><div class="stat-value">${s.wanted}</div><div>В розыске</div></div>
+            <div class="stat"><div class="stat-value">${s.vehicles}</div><div>Авто</div></div>
+            <div class="stat"><div class="stat-value">${s.unpaidFines}</div><div>Неоплаченных штрафов</div></div>
+            <div class="stat"><div class="stat-value">${s.activeIncidents}</div><div>Активных КУСП</div></div>
+        `;
+    }
+
+    // ГРАЖДАНЕ
+    async function loadCitizens() {
+        const citizens = await api('/api/citizens');
+        document.getElementById('citizensList').innerHTML = citizens.map(c => `
+            <tr>
+                <td>${c.id}</td><td>${c.nickname}</td><td>${c.full_name}</td><td>${c.passport_number || '—'}</td>
+                <td>${c.is_wanted ? '<span class="badge-wanted">⚠️ В РОЗЫСКЕ</span>' : '—'}</td>
+                <td>${!c.is_wanted ? `<button class="btn-danger" onclick="wantedPerson(${c.id})">🔴 В розыск</button>` : `<button class="btn-success" onclick="unwantedPerson(${c.id})">✅ Снять</button>`}</td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+
+    async function searchCitizens() {
+        const q = document.getElementById('searchInput').value;
+        if (!q || q.length < 2) { loadCitizens(); return; }
+        const citizens = await api(`/api/citizens/search?q=${encodeURIComponent(q)}`);
+        document.getElementById('citizensList').innerHTML = citizens.map(c => `<tr><td>${c.id}</td><td>${c.nickname}</td><td colspan="4">${c.full_name}</td></tr>`).join('');
+    }
+
+    async function addCitizen() {
+        const data = { nickname: document.getElementById('nickname').value, full_name: document.getElementById('fullname').value, birth_date: document.getElementById('birthdate').value, phone: document.getElementById('phone').value };
+        if (!data.nickname || !data.full_name) { alert('Заполните никнейм и ФИО'); return; }
+        const res = await api('/api/citizens', { method: 'POST', body: JSON.stringify(data) });
+        alert(`✅ Гражданин добавлен! Паспорт: ${res.passport_number}`);
+        document.getElementById('nickname').value = ''; document.getElementById('fullname').value = '';
         loadCitizens();
-    </script>
+    }
+
+    async function wantedPerson(id) { const reason = prompt('Причина розыска:'); if(reason) await api(`/api/citizens/${id}/wanted`, { method: 'POST', body: JSON.stringify({ reason }) }); alert('⚠️ Объявлен в розыск'); loadCitizens(); loadWanted(); }
+    async function unwantedPerson(id) { if(confirm('Снять с розыска?')){ await api(`/api/citizens/${id}/unwanted`, { method: 'POST' }); alert('✅ Снят'); loadCitizens(); loadWanted(); } }
+    async function loadWanted() { const w = await api('/api/wanted'); document.getElementById('wantedList').innerHTML = w.map(w => `<tr><td>${w.id}</td><td>${w.nickname}</td><td>${w.full_name}</td><td>${w.wanted_reason}</td><td>${new Date(w.wanted_since).toLocaleDateString()}</td><td><button class="btn-success" onclick="unwantedPerson(${w.id})">✅ Снять</button></td></tr>`).join(''); }
+
+    // ОРУЖИЕ
+    async function loadWeapons() { const w = await api('/api/weapons'); document.getElementById('weaponsList').innerHTML = w.map(w => `<tr><td>${w.id}</td><td>${w.serial_number}</td><td>${w.weapon_type}</td><td>${w.model}</td><td>${w.owner_nickname || '—'}</td><td>${w.is_stolen ? '⚠️ УГОН' : '✅'}</td><td><button class="btn-danger" onclick="reportStolenWeapon(${w.id})">🔫 В угон</button></td></tr>`).join(''); }
+    async function addWeapon() { const data = { serial_number: document.getElementById('weaponSerial').value, weapon_type: document.getElementById('weaponType').value, model: document.getElementById('weaponModel').value, owner_id: document.getElementById('weaponOwnerId').value || null }; if(!data.serial_number||!data.weapon_type||!data.model){alert('Заполните поля');return;} await api('/api/weapons', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Оружие добавлено'); loadWeapons(); loadStats(); }
+    async function reportStolenWeapon(id) { if(confirm('Объявить в угон?')){ await api(`/api/weapons/${id}/stolen`, { method: 'POST' }); alert('⚠️ Объявлено в угон'); loadWeapons(); } }
+
+    // ГИБДД
+    async function loadVehicles() { const v = await api('/api/vehicles'); document.getElementById('vehiclesList').innerHTML = v.map(v => `<tr><td>${v.id}</td><td>${v.plate_number}</td><td>${v.brand} ${v.model}</td><td>${v.color}</td><td>${v.owner_nickname || '—'}</td><td>${v.is_stolen ? '⚠️ УГОН' : '✅'}</td><td><button class="btn-danger" onclick="reportStolenVehicle(${v.id})">🚗 В угон</button></td></tr>`).join(''); }
+    async function addVehicle() { const data = { plate_number: document.getElementById('plateNumber').value, brand: document.getElementById('brand').value, model: document.getElementById('model').value, color: document.getElementById('color').value, owner_id: document.getElementById('vehicleOwnerId').value || null }; if(!data.plate_number||!data.brand||!data.model){alert('Заполните поля');return;} await api('/api/vehicles', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Авто добавлено'); loadVehicles(); loadStats(); }
+    async function reportStolenVehicle(id) { if(confirm('Объявить в угон?')){ await api(`/api/vehicles/${id}/stolen`, { method: 'POST' }); alert('⚠️ Объявлено в угон'); loadVehicles(); } }
+
+    // ШТРАФЫ
+    async function loadViolations() { const v = await api('/api/violations'); document.getElementById('violationsList').innerHTML = v.map(v => `<tr><td>${v.id}</td><td>${v.citizen_nickname || '—'}</td><td>${v.violation_type}</td><td>${v.fine_amount}₽</td>.Hasil${v.is_paid ? '✅ Оплачен' : '❌ Не оплачен'}</td>.Hasil${!v.is_paid ? `<button class="btn-success" onclick="payViolation(${v.id})">💰 Оплатить</button>` : '—'}</td></tr>`).join(''); }
+    async function addViolation() { const data = { citizen_id: document.getElementById('violationCitizenId').value || null, violation_type: document.getElementById('violationType').value, fine_amount: parseFloat(document.getElementById('fineAmount').value) || 0 }; if(!data.violation_type){alert('Введите тип нарушения');return;} await api('/api/violations', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Штраф выписан'); loadViolations(); loadStats(); }
+    async function payViolation(id) { await api(`/api/violations/${id}/pay`, { method: 'PUT' }); alert('✅ Штраф оплачен'); loadViolations(); loadStats(); }
+
+    // КУСП
+    async function loadIncidents() { const i = await api('/api/incidents'); document.getElementById('incidentsList').innerHTML = i.map(i => `<tr><td>${i.kusp_number}</td><td>${i.incident_type}</td>.Hasil${i.address}</td>.Hasil${i.priority}</td>.Hasil${i.status}</td>.Hasil${i.status !== 'Закрыто' ? `<select onchange="updateIncidentStatus(${i.id}, this.value)"><option>Зарегистрировано</option><option>В работе</option><option>Закрыто</option></select>` : '—'}</td></tr>`).join(''); }
+    async function addIncident() { const data = { incident_type: document.getElementById('incidentType').value, address: document.getElementById('incidentAddress').value, description: document.getElementById('incidentDesc').value, priority: document.getElementById('incidentPriority').value }; if(!data.incident_type||!data.address||!data.description){alert('Заполните поля');return;} await api('/api/incidents', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Происшествие создано'); loadIncidents(); loadStats(); }
+    async function updateIncidentStatus(id, status) { await api(`/api/incidents/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); loadIncidents(); loadStats(); }
+
+    // КРИМИНАЛ
+    async function loadCriminal() { const c = await api('/api/criminal'); document.getElementById('criminalList').innerHTML = c.map(c => `<tr><td>${c.id}</td>.Hasil${c.nickname}</td>.Hasil${c.crime_article}</td>.Hasil${c.sentence_type}${c.sentence_term_years > 0 ? ` ${c.sentence_term_years} лет` : ''}</td>.Hasil${c.is_active ? '<span class="badge-wanted">Активен</span>' : '<span style="color:green">Погашена</span>'}</td>.Hasil<button class="btn-success" onclick="closeCriminal(${c.id})">✅ Погасить</button></td></tr>`).join(''); }
+    async function addCriminal() { const data = { citizen_id: document.getElementById('criminalCitizenId').value, crime_article: document.getElementById('criminalArticle').value, crime_description: document.getElementById('criminalDesc').value, sentence_type: document.getElementById('sentenceType').value, sentence_term_years: parseInt(document.getElementById('sentenceYears').value) || 0 }; if(!data.citizen_id||!data.crime_article){alert('Заполните поля');return;} await api('/api/criminal', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Запись добавлена'); loadCriminal(); loadCitizens(); }
+    async function closeCriminal(id) { if(confirm('Погасить судимость?')){ await api(`/api/criminal/${id}/close`, { method: 'PUT' }); alert('✅ Погашено'); loadCriminal(); loadCitizens(); } }
+
+    // ДЕЖУРНЫЙ
+    async function loadDuty() { const d = await api('/api/duty/active'); if(d){ document.getElementById('dutyStatus').innerHTML = `<p>Server ID: ${d.server_id} | Начало: ${new Date(d.started_at).toLocaleString()}</p><button class="btn-danger" onclick="endDuty()">Завершить смену</button>`; document.getElementById('dutyForm').style.display = 'none'; } else { document.getElementById('dutyStatus').innerHTML = '<p>Нет активной смены</p>'; document.getElementById('dutyForm').style.display = 'block'; } }
+    async function startDuty() { const serverId = document.getElementById('serverId').value; if(!serverId){alert('Введите Server ID');return;} await api('/api/duty/start', { method: 'POST', body: JSON.stringify({ server_id: serverId }) }); alert('✅ Смена начата'); loadDuty(); }
+    async function endDuty() { if(confirm('Завершить смену?')){ await api('/api/duty/end', { method: 'POST' }); alert('✅ Смена завершена'); loadDuty(); } }
+
+    loadCitizens();
+</script>
 </body>
 </html>
