@@ -1,8 +1,6 @@
 {
   "name": "isod-mvd",
-  "version": "3.0.0",
-  "description": "ИСОД МВД России - УМВД по г. Провинция",
-  "main": "server.js",
+  "version": "1.0.0",
   "scripts": {
     "start": "node server.js"
   },
