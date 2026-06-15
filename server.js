@@ -112,7 +112,7 @@ async function initDatabase() {
         try {
             await pool.query(query);
         } catch(e) {
-            console.log('Таблица уже существует или ошибка:', e.message);
+            console.log('Таблица уже существует:', e.message);
         }
     }
     console.log('✅ Все таблицы готовы');
@@ -369,8 +369,5 @@ initDatabase().then(() => {
     console.error('Ошибка:', err);
     app.listen(PORT, () => {
         console.log(`Сервер запущен на порту ${PORT}`);
-    });
-});
-        console.log(`⚠️ Сервер запущен, но возможны ошибки БД: http://localhost:${PORT}`);
     });
 });
