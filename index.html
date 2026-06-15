@@ -3,33 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИСОД МВД России</title>
+    <title>ИСОД МВД России - УМВД по г. Провинция</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { max-width: 1600px; margin: 0 auto; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .card h3 { margin-bottom: 15px; color: #003366; border-left: 4px solid #003366; padding-left: 12px; }
-        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
-        .stat { background: linear-gradient(135deg, #003366, #001a33); color: white; padding: 15px 25px; border-radius: 12px; text-align: center; min-width: 120px; }
-        .stat-value { font-size: 28px; font-weight: bold; }
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab-btn { background: #ddd; padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; }
+        .stats { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
+        .stat { background: linear-gradient(135deg, #003366, #001a33); color: white; padding: 15px 20px; border-radius: 12px; text-align: center; min-width: 100px; }
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .stat-label { font-size: 11px; opacity: 0.9; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background: #ddd; padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; font-size: 14px; }
         .tab-btn.active { background: #003366; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #003366; color: white; }
+        th { background: #003366; color: white; position: sticky; top: 0; }
+        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
         input, select, textarea { padding: 8px 12px; margin: 5px; border: 1px solid #ddd; border-radius: 6px; }
         button { padding: 8px 16px; margin: 5px; border-radius: 6px; border: none; cursor: pointer; }
         .btn-primary { background: #003366; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-success { background: #28a745; color: white; }
-        .badge-wanted { background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .badge-wanted { background: #dc3545; color: white; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+        .badge-criminal { background: #6c757d; color: white; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+        .badge-stolen { background: #dc3545; color: white; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 11px; color: #666; margin-bottom: 3px; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .search-bar input { flex: 1; min-width: 200px; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 20px; border-radius: 8px; z-index: 2000; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
 <body>
@@ -37,86 +47,189 @@
     <div class="card" style="text-align:center; background: linear-gradient(135deg, #003366, #001a33); color: white;">
         <h1>🏛️ ИСОД МВД России</h1>
         <p>УМВД России по г. Провинция, Ленинградская область</p>
+        <p style="font-size: 11px; margin-top: 10px;">Интегрированная Система Обеспечения Деятельности | Версия 3.0</p>
     </div>
 
     <div class="stats" id="stats"></div>
 
     <div class="tabs">
-        <button class="tab-btn active" data-tab="citizens">👥 Граждане</button>
-        <button class="tab-btn" data-tab="wanted">⚠️ Розыск</button>
-        <button class="tab-btn" data-tab="weapons">🔫 Оружие</button>
-        <button class="tab-btn" data-tab="vehicles">🚗 ГИБДД</button>
-        <button class="tab-btn" data-tab="violations">💰 Штрафы</button>
+        <button class="tab-btn active" data-tab="citizens">👥 ИБД-Ф (Граждане)</button>
+        <button class="tab-btn" data-tab="wanted">⚠️ Следопыт-М (Розыск)</button>
+        <button class="tab-btn" data-tab="weapons">🔫 СЦУО (Оружие)</button>
+        <button class="tab-btn" data-tab="vehicles">🚗 ГИБДД-М</button>
+        <button class="tab-btn" data-tab="violations">📝 Штрафы ПДД</button>
         <button class="tab-btn" data-tab="incidents">🚨 КУСП</button>
-        <button class="tab-btn" data-tab="criminal">⚖️ Криминал</button>
-        <button class="tab-btn" data-tab="duty">🕐 Дежурный</button>
+        <button class="tab-btn" data-tab="criminal">⚖️ Реестр подучётных</button>
+        <button class="tab-btn" data-tab="duty">🕐 Дежурная смена</button>
     </div>
 
-    <!-- ГРАЖДАНЕ -->
+    <!-- ИБД-Ф -->
     <div id="tab-citizens" class="tab-content active">
         <div class="card">
             <h3>➕ Добавить гражданина</h3>
             <div class="form-row">
                 <div class="form-group"><label>Никнейм *</label><input type="text" id="nickname" placeholder="Killer007"></div>
-                <div class="form-group"><label>ФИО *</label><input type="text" id="fullname" placeholder="Иванов Иван"></div>
+                <div class="form-group"><label>ФИО *</label><input type="text" id="fullname" placeholder="Иванов Иван Иванович"></div>
                 <div class="form-group"><label>Дата рождения</label><input type="date" id="birthdate"></div>
-                <div class="form-group"><label>Телефон</label><input type="text" id="phone" placeholder="+7..."></div>
+                <div class="form-group"><label>Телефон</label><input type="text" id="phone" placeholder="+7 (999) 123-45-67"></div>
+                <div class="form-group"><label>Адрес</label><input type="text" id="address" placeholder="г. Провинция, ул. Ленина 1"></div>
                 <div class="form-group"><button class="btn-primary" onclick="addCitizen()">➕ Добавить</button></div>
             </div>
         </div>
         <div class="card">
-            <h3>🔍 Поиск</h3>
-            <div class="form-row"><input type="text" id="searchInput" placeholder="Поиск по ФИО, никнейму..." style="flex:1"><button onclick="searchCitizens()">🔍 Найти</button><button onclick="loadCitizens()">📋 Все</button></div>
-            <div style="overflow-x:auto"><tr><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Паспорт</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="citizensList"></tbody></table></div>
+            <h3>🔍 Поиск граждан</h3>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Поиск по ФИО, никнейму, телефону, паспорту...">
+                <button class="btn-primary" onclick="searchCitizens()">🔍 Найти</button>
+                <button class="btn-secondary" onclick="loadCitizens()">📋 Показать всех</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Телефон</th><th>Паспорт</th><th>Статус</th><th>Действия</th></tr></thead>
+                    <tbody id="citizensList"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- РОЗЫСК -->
-    <div id="tab-wanted" class="tab-content"><div class="card"><h3>⚠️ В розыске</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Причина</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="wantedList"></tbody></table></div></div></div>
+    <!-- Следопыт-М -->
+    <div id="tab-wanted" class="tab-content">
+        <div class="card">
+            <h3>⚠️ Активный розыск</h3>
+            <div class="table-wrapper">
+                <table><thead><tr><th>ID</th><th>Никнейм</th><th>ФИО</th><th>Причина</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="wantedList"></tbody></table>
+            </div>
+        </div>
+    </div>
 
-    <!-- ОРУЖИЕ -->
+    <!-- СЦУО -->
     <div id="tab-weapons" class="tab-content">
-        <div class="card"><h3>➕ Добавить оружие</h3><div class="form-row"><input type="text" id="weaponSerial" placeholder="Серийный номер"><input type="text" id="weaponType" placeholder="Тип"><input type="text" id="weaponModel" placeholder="Модель"><input type="number" id="weaponOwnerId" placeholder="ID владельца"><button class="btn-primary" onclick="addWeapon()">🔫 Добавить</button></div></div>
-        <div class="card"><h3>📋 Список оружия</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Серийный номер</th><th>Тип</th><th>Модель</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="weaponsList"></tbody></table></div></div>
+        <div class="card">
+            <h3>➕ Зарегистрировать оружие</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Серийный номер *</label><input type="text" id="weaponSerial" placeholder="SN-123456"></div>
+                <div class="form-group"><label>Тип *</label><select id="weaponType"><option>огнестрельное</option><option>газовое</option><option>травматическое</option><option>холодное</option><option>пневматическое</option></select></div>
+                <div class="form-group"><label>Модель *</label><input type="text" id="weaponModel" placeholder="Пистолет Макарова"></div>
+                <div class="form-group"><label>Калибр</label><input type="text" id="weaponCaliber" placeholder="9x18"></div>
+                <div class="form-group"><label>ID владельца</label><input type="number" id="weaponOwnerId" placeholder="ID гражданина"></div>
+                <div class="form-group"><button class="btn-primary" onclick="addWeapon()">🔫 Зарегистрировать</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>🔫 Список оружия</h3>
+            <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Серийный номер</th><th>Тип</th><th>Модель</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="weaponsList"></tbody></table></div>
+        </div>
     </div>
 
-    <!-- ГИБДД -->
+    <!-- ГИБДД-М -->
     <div id="tab-vehicles" class="tab-content">
-        <div class="card"><h3>➕ Добавить авто</h3><div class="form-row"><input type="text" id="plateNumber" placeholder="Госномер"><input type="text" id="brand" placeholder="Марка"><input type="text" id="model" placeholder="Модель"><input type="text" id="color" placeholder="Цвет"><input type="number" id="vehicleOwnerId" placeholder="ID владельца"><button class="btn-primary" onclick="addVehicle()">🚗 Добавить</button></div></div>
-        <div class="card"><h3>🚗 Автомобили</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Госномер</th><th>Марка/Модель</th><th>Цвет</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="vehiclesList"></tbody></table></div></div>
+        <div class="card">
+            <h3>➕ Добавить автомобиль</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Госномер *</label><input type="text" id="plateNumber" placeholder="А123ВС77"></div>
+                <div class="form-group"><label>Марка *</label><input type="text" id="brand" placeholder="Toyota"></div>
+                <div class="form-group"><label>Модель *</label><input type="text" id="model" placeholder="Camry"></div>
+                <div class="form-group"><label>Цвет *</label><input type="text" id="color" placeholder="Белый"></div>
+                <div class="form-group"><label>Год</label><input type="number" id="year" placeholder="2020"></div>
+                <div class="form-group"><label>ID владельца</label><input type="number" id="vehicleOwnerId" placeholder="ID гражданина"></div>
+                <div class="form-group"><button class="btn-primary" onclick="addVehicle()">🚗 Добавить</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>🚗 Поиск по госномеру</h3>
+            <div class="search-bar"><input type="text" id="plateSearch" placeholder="Госномер"><button class="btn-primary" onclick="searchVehicle()">🔍 Проверить</button></div>
+        </div>
+        <div class="card">
+            <h3>📋 Список автомобилей</h3>
+            <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Госномер</th><th>Марка/Модель</th><th>Цвет</th><th>Владелец</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="vehiclesList"></tbody></table></div>
+        </div>
     </div>
 
-    <!-- ШТРАФЫ -->
+    <!-- Штрафы ПДД -->
     <div id="tab-violations" class="tab-content">
-        <div class="card"><h3>📝 Выписать штраф</h3><div class="form-row"><input type="number" id="violationCitizenId" placeholder="ID нарушителя"><input type="text" id="violationType" placeholder="Тип нарушения"><input type="number" id="fineAmount" placeholder="Сумма штрафа"><button class="btn-primary" onclick="addViolation()">💰 Выписать</button></div></div>
-        <div class="card"><h3>📋 Штрафы</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Нарушитель</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="violationsList"></tbody></table></div></div>
+        <div class="card">
+            <h3>📝 Выписать штраф</h3>
+            <div class="form-row">
+                <div class="form-group"><label>ID нарушителя</label><input type="number" id="violationCitizenId" placeholder="ID гражданина"></div>
+                <div class="form-group"><label>Тип нарушения *</label><input type="text" id="violationType" placeholder="Превышение скорости"></div>
+                <div class="form-group"><label>Сумма штрафа</label><input type="number" id="fineAmount" placeholder="500"></div>
+                <div class="form-group"><button class="btn-primary" onclick="addViolation()">💰 Выписать</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📋 Штрафы</h3>
+            <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Нарушитель</th><th>Тип</th><th>Сумма</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="violationsList"></tbody></table></div>
+        </div>
     </div>
 
     <!-- КУСП -->
     <div id="tab-incidents" class="tab-content">
-        <div class="card"><h3>➕ Создать происшествие</h3><div class="form-row"><input type="text" id="incidentType" placeholder="Тип"><input type="text" id="incidentAddress" placeholder="Адрес"><textarea id="incidentDesc" rows="2" placeholder="Описание"></textarea><select id="incidentPriority"><option>Низкий</option><option>Средний</option><option>Высший</option></select><button class="btn-primary" onclick="addIncident()">🚨 Создать</button></div></div>
-        <div class="card"><h3>📋 КУСП</h3><div style="overflow-x:auto"><table><thead><tr><th>Номер</th><th>Тип</th><th>Адрес</th><th>Приоритет</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="incidentsList"></tbody></table></div></div>
+        <div class="card">
+            <h3>🚨 Создать происшествие</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Тип *</label><input type="text" id="incidentType" placeholder="Кража, ДТП, Драка..."></div>
+                <div class="form-group"><label>Адрес *</label><input type="text" id="incidentAddress" placeholder="г. Провинция, ул..."></div>
+                <div class="form-group"><label>Приоритет</label><select id="incidentPriority"><option>Низкий</option><option>Средний</option><option>Высший</option></select></div>
+                <div class="form-group"><button class="btn-primary" onclick="addIncident()">🚨 Создать</button></div>
+            </div>
+            <div class="form-group"><label>Описание *</label><textarea id="incidentDesc" rows="3" style="width:100%"></textarea></div>
+        </div>
+        <div class="card">
+            <h3>📋 Происшествия</h3>
+            <div class="filter-bar"><select id="incidentStatusFilter" onchange="loadIncidents()"><option value="all">Все статусы</option><option value="Зарегистрировано">Зарегистрировано</option><option value="В работе">В работе</option><option value="Закрыто">Закрыто</option></select></div>
+            <div class="table-wrapper"><table><thead><tr><th>Номер</th><th>Тип</th><th>Адрес</th><th>Приоритет</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="incidentsList"></tbody></table></div>
+        </div>
     </div>
 
-    <!-- КРИМИНАЛ -->
+    <!-- Реестр подучётных -->
     <div id="tab-criminal" class="tab-content">
-        <div class="card"><h3>⚖️ Добавить запись</h3><div class="form-row"><input type="number" id="criminalCitizenId" placeholder="ID гражданина"><input type="text" id="criminalArticle" placeholder="Статья"><input type="text" id="criminalDesc" placeholder="Описание"><select id="sentenceType"><option>лишение свободы</option><option>условно</option><option>штраф</option></select><input type="number" id="sentenceYears" placeholder="Срок (лет)"><button class="btn-primary" onclick="addCriminal()">⚖️ Добавить</button></div></div>
-        <div class="card"><h3>📋 Реестр</h3><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Гражданин</th><th>Статья</th><th>Наказание</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="criminalList"></tbody></table></div></div>
+        <div class="card">
+            <h3>⚖️ Добавить запись в реестр</h3>
+            <div class="form-row">
+                <div class="form-group"><label>ID гражданина *</label><input type="number" id="criminalCitizenId" placeholder="ID"></div>
+                <div class="form-group"><label>Тип учёта *</label><select id="criminalType"><option>судимость</option><option>административный</option><option>на учёте</option><option>под следствием</option></select></div>
+                <div class="form-group"><label>Статья *</label><input type="text" id="criminalArticle" placeholder="ст. 158 УК РФ"></div>
+                <div class="form-group"><label>Описание</label><input type="text" id="criminalDesc" placeholder="Кража"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Дата приговора</label><input type="date" id="sentenceDate"></div>
+                <div class="form-group"><label>Мера</label><select id="sentenceType"><option>лишение свободы</option><option>условно</option><option>штраф</option></select></div>
+                <div class="form-group"><label>Срок (лет)</label><input type="number" id="sentenceYears" placeholder="0"></div>
+                <div class="form-group"><button class="btn-primary" onclick="addCriminal()">⚖️ Добавить</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📋 Реестр</h3>
+            <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Гражданин</th><th>Тип</th><th>Статья</th><th>Приговор</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="criminalList"></tbody></table></div>
+        </div>
     </div>
 
-    <!-- ДЕЖУРНЫЙ -->
+    <!-- Дежурная смена -->
     <div id="tab-duty" class="tab-content">
-        <div class="card"><h3>🕐 Дежурная смена</h3><div id="dutyStatus"></div><div id="dutyForm"><input type="text" id="serverId" placeholder="Server ID"><button class="btn-primary" onclick="startDuty()">Начать смену</button></div></div>
+        <div class="card">
+            <h3>🕐 Дежурная смена</h3>
+            <div id="dutyStatus"></div>
+            <div id="dutyForm" class="form-row" style="margin-top:15px"><input type="text" id="serverId" placeholder="Server ID"><button class="btn-primary" onclick="startDuty()">Начать смену</button></div>
+        </div>
     </div>
 </div>
 
 <script>
+    // ========== ОБЩИЕ ФУНКЦИИ ==========
     async function api(url, options = {}) {
         const res = await fetch(url, options);
         if (!res.ok) throw new Error('Ошибка');
         return res.json();
     }
-
+    
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -130,82 +243,360 @@
         if (tab === 'criminal') loadCriminal();
         if (tab === 'duty') loadDuty();
     }
-
+    
     async function loadStats() {
-        const s = await api('/api/stats');
-        document.getElementById('stats').innerHTML = `
-            <div class="stat"><div class="stat-value">${s.citizens}</div><div>Граждан</div></div>
-            <div class="stat"><div class="stat-value">${s.weapons}</div><div>Оружия</div></div>
-            <div class="stat"><div class="stat-value">${s.wanted}</div><div>В розыске</div></div>
-            <div class="stat"><div class="stat-value">${s.vehicles}</div><div>Авто</div></div>
-            <div class="stat"><div class="stat-value">${s.unpaidFines}</div><div>Неоплаченных штрафов</div></div>
-            <div class="stat"><div class="stat-value">${s.activeIncidents}</div><div>Активных КУСП</div></div>
-        `;
+        try {
+            const s = await api('/api/stats');
+            document.getElementById('stats').innerHTML = `
+                <div class="stat"><div class="stat-value">${s.citizens}</div><div class="stat-label">Граждан</div></div>
+                <div class="stat"><div class="stat-value">${s.weapons}</div><div class="stat-label">Оружия</div></div>
+                <div class="stat"><div class="stat-value">${s.wanted}</div><div class="stat-label">В розыске</div></div>
+                <div class="stat"><div class="stat-value">${s.vehicles}</div><div class="stat-label">Авто</div></div>
+                <div class="stat"><div class="stat-value">${s.stolenVehicles}</div><div class="stat-label">Угнано</div></div>
+                <div class="stat"><div class="stat-value">${s.unpaidFines}</div><div class="stat-label">Штрафов</div></div>
+                <div class="stat"><div class="stat-value">${s.activeIncidents}</div><div class="stat-label">КУСП</div></div>
+                <div class="stat"><div class="stat-value">${s.criminals}</div><div class="stat-label">На учёте</div></div>
+            `;
+        } catch(e) { console.error(e); }
     }
-
-    // ГРАЖДАНЕ
+    
+    // ========== ГРАЖДАНЕ ==========
     async function loadCitizens() {
         const citizens = await api('/api/citizens');
         document.getElementById('citizensList').innerHTML = citizens.map(c => `
             <tr>
-                <td>${c.id}</td><td>${c.nickname}</td><td>${c.full_name}</td><td>${c.passport_number || '—'}</td>
+                <td>${c.id}</td>
+                <td><strong>${c.nickname}</strong></td>
+                <td>${c.full_name}</td>
+                <td>${c.phone || '—'}</td>
+                <td>${c.passport_number || '—'}</td>
                 <td>${c.is_wanted ? '<span class="badge-wanted">⚠️ В РОЗЫСКЕ</span>' : '—'}</td>
-                <td>${!c.is_wanted ? `<button class="btn-danger" onclick="wantedPerson(${c.id})">🔴 В розыск</button>` : `<button class="btn-success" onclick="unwantedPerson(${c.id})">✅ Снять</button>`}</td>
+                <td>
+                    ${!c.is_wanted ? `<button class="btn-danger" onclick="wantedPerson(${c.id})">🔴 В розыск</button>` : `<button class="btn-success" onclick="unwantedPerson(${c.id})">✅ Снять</button>`}
+                    <button class="btn-secondary" onclick="showCitizenDetails(${c.id})">👁️</button>
+                </td>
             </tr>
         `).join('');
         loadStats();
     }
-
+    
     async function searchCitizens() {
         const q = document.getElementById('searchInput').value;
         if (!q || q.length < 2) { loadCitizens(); return; }
         const citizens = await api(`/api/citizens/search?q=${encodeURIComponent(q)}`);
-        document.getElementById('citizensList').innerHTML = citizens.map(c => `<tr><td>${c.id}</td><td>${c.nickname}</td><td colspan="4">${c.full_name}</td></tr>`).join('');
+        document.getElementById('citizensList').innerHTML = citizens.map(c => `<tr><td colspan="7">${c.nickname} - ${c.full_name} (${c.passport_number || '—'})</td></tr>`).join('');
     }
-
+    
     async function addCitizen() {
-        const data = { nickname: document.getElementById('nickname').value, full_name: document.getElementById('fullname').value, birth_date: document.getElementById('birthdate').value, phone: document.getElementById('phone').value };
+        const data = {
+            nickname: document.getElementById('nickname').value,
+            full_name: document.getElementById('fullname').value,
+            birth_date: document.getElementById('birthdate').value,
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value
+        };
         if (!data.nickname || !data.full_name) { alert('Заполните никнейм и ФИО'); return; }
         const res = await api('/api/citizens', { method: 'POST', body: JSON.stringify(data) });
-        alert(`✅ Гражданин добавлен! Паспорт: ${res.passport_number}`);
-        document.getElementById('nickname').value = ''; document.getElementById('fullname').value = '';
+        showToast(`✅ Гражданин добавлен! Паспорт: ${res.passport_number}`);
+        document.getElementById('nickname').value = '';
+        document.getElementById('fullname').value = '';
+        document.getElementById('birthdate').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('address').value = '';
         loadCitizens();
     }
-
-    async function wantedPerson(id) { const reason = prompt('Причина розыска:'); if(reason) await api(`/api/citizens/${id}/wanted`, { method: 'POST', body: JSON.stringify({ reason }) }); alert('⚠️ Объявлен в розыск'); loadCitizens(); loadWanted(); }
-    async function unwantedPerson(id) { if(confirm('Снять с розыска?')){ await api(`/api/citizens/${id}/unwanted`, { method: 'POST' }); alert('✅ Снят'); loadCitizens(); loadWanted(); } }
-    async function loadWanted() { const w = await api('/api/wanted'); document.getElementById('wantedList').innerHTML = w.map(w => `<tr><td>${w.id}</td><td>${w.nickname}</td><td>${w.full_name}</td><td>${w.wanted_reason}</td><td>${new Date(w.wanted_since).toLocaleDateString()}</td><td><button class="btn-success" onclick="unwantedPerson(${w.id})">✅ Снять</button></td></tr>`).join(''); }
-
-    // ОРУЖИЕ
-    async function loadWeapons() { const w = await api('/api/weapons'); document.getElementById('weaponsList').innerHTML = w.map(w => `<tr><td>${w.id}</td><td>${w.serial_number}</td><td>${w.weapon_type}</td><td>${w.model}</td><td>${w.owner_nickname || '—'}</td><td>${w.is_stolen ? '⚠️ УГОН' : '✅'}</td><td><button class="btn-danger" onclick="reportStolenWeapon(${w.id})">🔫 В угон</button></td></tr>`).join(''); }
-    async function addWeapon() { const data = { serial_number: document.getElementById('weaponSerial').value, weapon_type: document.getElementById('weaponType').value, model: document.getElementById('weaponModel').value, owner_id: document.getElementById('weaponOwnerId').value || null }; if(!data.serial_number||!data.weapon_type||!data.model){alert('Заполните поля');return;} await api('/api/weapons', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Оружие добавлено'); loadWeapons(); loadStats(); }
-    async function reportStolenWeapon(id) { if(confirm('Объявить в угон?')){ await api(`/api/weapons/${id}/stolen`, { method: 'POST' }); alert('⚠️ Объявлено в угон'); loadWeapons(); } }
-
-    // ГИБДД
-    async function loadVehicles() { const v = await api('/api/vehicles'); document.getElementById('vehiclesList').innerHTML = v.map(v => `<tr><td>${v.id}</td><td>${v.plate_number}</td><td>${v.brand} ${v.model}</td><td>${v.color}</td><td>${v.owner_nickname || '—'}</td><td>${v.is_stolen ? '⚠️ УГОН' : '✅'}</td><td><button class="btn-danger" onclick="reportStolenVehicle(${v.id})">🚗 В угон</button></td></tr>`).join(''); }
-    async function addVehicle() { const data = { plate_number: document.getElementById('plateNumber').value, brand: document.getElementById('brand').value, model: document.getElementById('model').value, color: document.getElementById('color').value, owner_id: document.getElementById('vehicleOwnerId').value || null }; if(!data.plate_number||!data.brand||!data.model){alert('Заполните поля');return;} await api('/api/vehicles', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Авто добавлено'); loadVehicles(); loadStats(); }
-    async function reportStolenVehicle(id) { if(confirm('Объявить в угон?')){ await api(`/api/vehicles/${id}/stolen`, { method: 'POST' }); alert('⚠️ Объявлено в угон'); loadVehicles(); } }
-
-    // ШТРАФЫ
-    async function loadViolations() { const v = await api('/api/violations'); document.getElementById('violationsList').innerHTML = v.map(v => `<tr><td>${v.id}</td><td>${v.citizen_nickname || '—'}</td><td>${v.violation_type}</td><td>${v.fine_amount}₽</td>.Hasil${v.is_paid ? '✅ Оплачен' : '❌ Не оплачен'}</td>.Hasil${!v.is_paid ? `<button class="btn-success" onclick="payViolation(${v.id})">💰 Оплатить</button>` : '—'}</td></tr>`).join(''); }
-    async function addViolation() { const data = { citizen_id: document.getElementById('violationCitizenId').value || null, violation_type: document.getElementById('violationType').value, fine_amount: parseFloat(document.getElementById('fineAmount').value) || 0 }; if(!data.violation_type){alert('Введите тип нарушения');return;} await api('/api/violations', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Штраф выписан'); loadViolations(); loadStats(); }
-    async function payViolation(id) { await api(`/api/violations/${id}/pay`, { method: 'PUT' }); alert('✅ Штраф оплачен'); loadViolations(); loadStats(); }
-
-    // КУСП
-    async function loadIncidents() { const i = await api('/api/incidents'); document.getElementById('incidentsList').innerHTML = i.map(i => `<tr><td>${i.kusp_number}</td><td>${i.incident_type}</td>.Hasil${i.address}</td>.Hasil${i.priority}</td>.Hasil${i.status}</td>.Hasil${i.status !== 'Закрыто' ? `<select onchange="updateIncidentStatus(${i.id}, this.value)"><option>Зарегистрировано</option><option>В работе</option><option>Закрыто</option></select>` : '—'}</td></tr>`).join(''); }
-    async function addIncident() { const data = { incident_type: document.getElementById('incidentType').value, address: document.getElementById('incidentAddress').value, description: document.getElementById('incidentDesc').value, priority: document.getElementById('incidentPriority').value }; if(!data.incident_type||!data.address||!data.description){alert('Заполните поля');return;} await api('/api/incidents', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Происшествие создано'); loadIncidents(); loadStats(); }
-    async function updateIncidentStatus(id, status) { await api(`/api/incidents/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); loadIncidents(); loadStats(); }
-
-    // КРИМИНАЛ
-    async function loadCriminal() { const c = await api('/api/criminal'); document.getElementById('criminalList').innerHTML = c.map(c => `<tr><td>${c.id}</td>.Hasil${c.nickname}</td>.Hasil${c.crime_article}</td>.Hasil${c.sentence_type}${c.sentence_term_years > 0 ? ` ${c.sentence_term_years} лет` : ''}</td>.Hasil${c.is_active ? '<span class="badge-wanted">Активен</span>' : '<span style="color:green">Погашена</span>'}</td>.Hasil<button class="btn-success" onclick="closeCriminal(${c.id})">✅ Погасить</button></td></tr>`).join(''); }
-    async function addCriminal() { const data = { citizen_id: document.getElementById('criminalCitizenId').value, crime_article: document.getElementById('criminalArticle').value, crime_description: document.getElementById('criminalDesc').value, sentence_type: document.getElementById('sentenceType').value, sentence_term_years: parseInt(document.getElementById('sentenceYears').value) || 0 }; if(!data.citizen_id||!data.crime_article){alert('Заполните поля');return;} await api('/api/criminal', { method: 'POST', body: JSON.stringify(data) }); alert('✅ Запись добавлена'); loadCriminal(); loadCitizens(); }
-    async function closeCriminal(id) { if(confirm('Погасить судимость?')){ await api(`/api/criminal/${id}/close`, { method: 'PUT' }); alert('✅ Погашено'); loadCriminal(); loadCitizens(); } }
-
-    // ДЕЖУРНЫЙ
-    async function loadDuty() { const d = await api('/api/duty/active'); if(d){ document.getElementById('dutyStatus').innerHTML = `<p>Server ID: ${d.server_id} | Начало: ${new Date(d.started_at).toLocaleString()}</p><button class="btn-danger" onclick="endDuty()">Завершить смену</button>`; document.getElementById('dutyForm').style.display = 'none'; } else { document.getElementById('dutyStatus').innerHTML = '<p>Нет активной смены</p>'; document.getElementById('dutyForm').style.display = 'block'; } }
-    async function startDuty() { const serverId = document.getElementById('serverId').value; if(!serverId){alert('Введите Server ID');return;} await api('/api/duty/start', { method: 'POST', body: JSON.stringify({ server_id: serverId }) }); alert('✅ Смена начата'); loadDuty(); }
-    async function endDuty() { if(confirm('Завершить смену?')){ await api('/api/duty/end', { method: 'POST' }); alert('✅ Смена завершена'); loadDuty(); } }
-
+    
+    async function showCitizenDetails(id) {
+        const citizens = await api('/api/citizens');
+        const c = citizens.find(c => c.id === id);
+        if(c) alert(`📋 ${c.full_name}\nНикнейм: ${c.nickname}\nПаспорт: ${c.passport_number}\nТелефон: ${c.phone || '—'}\nАдрес: ${c.address || '—'}\nСтатус: ${c.is_wanted ? 'В РОЗЫСКЕ' : 'Не в розыске'}`);
+    }
+    
+    // ========== РОЗЫСК ==========
+    async function wantedPerson(id) {
+        const reason = prompt('Причина розыска:');
+        if (!reason) return;
+        await api(`/api/citizens/${id}/wanted`, { method: 'POST', body: JSON.stringify({ reason }) });
+        showToast('⚠️ Объявлен в розыск');
+        loadCitizens();
+        loadWanted();
+    }
+    
+    async function unwantedPerson(id) {
+        if (!confirm('Снять с розыска?')) return;
+        await api(`/api/citizens/${id}/unwanted`, { method: 'POST' });
+        showToast('✅ Снят с розыска');
+        loadCitizens();
+        loadWanted();
+    }
+    
+    async function loadWanted() {
+        const wanted = await api('/api/wanted');
+        document.getElementById('wantedList').innerHTML = wanted.map(w => `
+            <tr>
+                <td>${w.id}</td>
+                <td>${w.nickname}</td>
+                <td>${w.full_name}</td>
+                <td>${w.wanted_reason || '—'}</td>
+                <td>${w.wanted_since ? new Date(w.wanted_since).toLocaleDateString() : '—'}</td>
+                <td><button class="btn-success" onclick="unwantedPerson(${w.id})">✅ Снять</button></td>
+            </tr>
+        `).join('');
+    }
+    
+    // ========== ОРУЖИЕ ==========
+    async function loadWeapons() {
+        const weapons = await api('/api/weapons');
+        document.getElementById('weaponsList').innerHTML = weapons.map(w => `
+            <tr>
+                <td>${w.id}</td>
+                <td>${w.serial_number}</td>
+                <td>${w.weapon_type}</td>
+                <td>${w.model}</td>
+                <td>${w.owner_nickname || '—'}</td>
+                <td>${w.is_stolen ? '<span class="badge-stolen">⚠️ УГОН</span>' : '<span class="badge-success">✅ На месте</span>'}</td>
+                <td><button class="btn-danger" onclick="reportStolenWeapon(${w.id})">🔫 В угон</button></td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+    
+    async function addWeapon() {
+        const data = {
+            serial_number: document.getElementById('weaponSerial').value,
+            weapon_type: document.getElementById('weaponType').value,
+            model: document.getElementById('weaponModel').value,
+            caliber: document.getElementById('weaponCaliber').value,
+            owner_id: document.getElementById('weaponOwnerId').value || null
+        };
+        if (!data.serial_number || !data.weapon_type || !data.model) { alert('Заполните поля'); return; }
+        await api('/api/weapons', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Оружие зарегистрировано');
+        document.getElementById('weaponSerial').value = '';
+        document.getElementById('weaponModel').value = '';
+        document.getElementById('weaponOwnerId').value = '';
+        loadWeapons();
+        loadStats();
+    }
+    
+    async function reportStolenWeapon(id) {
+        if (!confirm('Объявить оружие в угон?')) return;
+        await api(`/api/weapons/${id}/stolen`, { method: 'POST' });
+        showToast('⚠️ Оружие объявлено в угон');
+        loadWeapons();
+        loadStats();
+    }
+    
+    // ========== ГИБДД ==========
+    async function loadVehicles() {
+        const vehicles = await api('/api/vehicles');
+        document.getElementById('vehiclesList').innerHTML = vehicles.map(v => `
+            <tr>
+                <td>${v.id}</td>
+                <td><strong>${v.plate_number}</strong></td>
+                <td>${v.brand} ${v.model}</td>
+                <td>${v.color}</td>
+                <td>${v.owner_nickname || '—'}</td>
+                <td>${v.is_stolen ? '<span class="badge-stolen">⚠️ УГОН</span>' : '<span class="badge-success">✅ На месте</span>'}</td>
+                <td><button class="btn-danger" onclick="reportStolenVehicle(${v.id})">🚗 В угон</button></td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+    
+    async function addVehicle() {
+        const data = {
+            plate_number: document.getElementById('plateNumber').value,
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            color: document.getElementById('color').value,
+            year: document.getElementById('year').value || null,
+            owner_id: document.getElementById('vehicleOwnerId').value || null
+        };
+        if (!data.plate_number || !data.brand || !data.model || !data.color) { alert('Заполните поля'); return; }
+        await api('/api/vehicles', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Автомобиль добавлен');
+        document.getElementById('plateNumber').value = '';
+        document.getElementById('brand').value = '';
+        document.getElementById('model').value = '';
+        document.getElementById('vehicleOwnerId').value = '';
+        loadVehicles();
+        loadStats();
+    }
+    
+    async function searchVehicle() {
+        const plate = document.getElementById('plateSearch').value;
+        if (!plate) { loadVehicles(); return; }
+        const vehicles = await api(`/api/vehicles?plate=${plate}`);
+        document.getElementById('vehiclesList').innerHTML = vehicles.map(v => `<tr><td colspan="7">${v.plate_number} - ${v.brand} ${v.model} (${v.owner_nickname || 'без владельца'})</td></tr>`).join('');
+    }
+    
+    async function reportStolenVehicle(id) {
+        if (!confirm('Объявить авто в угон?')) return;
+        await api(`/api/vehicles/${id}/stolen`, { method: 'POST' });
+        showToast('⚠️ Авто объявлено в угон');
+        loadVehicles();
+        loadStats();
+    }
+    
+    // ========== ШТРАФЫ ==========
+    async function loadViolations() {
+        const violations = await api('/api/violations');
+        document.getElementById('violationsList').innerHTML = violations.map(v => `
+            <tr>
+                <td>${v.id}</td>
+                <td>${v.citizen_nickname || '—'}</td>
+                <td>${v.violation_type}</td>
+                <td>${v.fine_amount} ₽</td>
+                <td>${v.is_paid ? '<span class="badge-success">✅ Оплачен</span>' : '<span class="badge-wanted">❌ Не оплачен</span>'}</td>
+                <td>${!v.is_paid ? `<button class="btn-success" onclick="payViolation(${v.id})">💰 Оплатить</button>` : '—'}</td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+    
+    async function addViolation() {
+        const data = {
+            citizen_id: document.getElementById('violationCitizenId').value || null,
+            violation_type: document.getElementById('violationType').value,
+            fine_amount: parseFloat(document.getElementById('fineAmount').value) || 0
+        };
+        if (!data.violation_type) { alert('Введите тип нарушения'); return; }
+        await api('/api/violations', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Штраф выписан');
+        document.getElementById('violationCitizenId').value = '';
+        document.getElementById('violationType').value = '';
+        document.getElementById('fineAmount').value = '';
+        loadViolations();
+        loadStats();
+    }
+    
+    async function payViolation(id) {
+        await api(`/api/violations/${id}/pay`, { method: 'PUT' });
+        showToast('✅ Штраф оплачен');
+        loadViolations();
+        loadStats();
+    }
+    
+    // ========== КУСП ==========
+    async function loadIncidents() {
+        const incidents = await api('/api/incidents');
+        const statusFilter = document.getElementById('incidentStatusFilter')?.value || 'all';
+        const filtered = statusFilter === 'all' ? incidents : incidents.filter(i => i.status === statusFilter);
+        document.getElementById('incidentsList').innerHTML = filtered.map(i => `
+            <tr>
+                <td>${i.kusp_number}</td>
+                <td>${i.incident_type}</td>
+                <td>${i.address}</td>
+                <td><span class="${i.priority === 'Высший' ? 'badge-wanted' : i.priority === 'Средний' ? 'badge-criminal' : 'badge-success'}">${i.priority}</span></td>
+                <td>${i.status}</td>
+                <td>${i.status !== 'Закрыто' ? `<select onchange="updateIncidentStatus(${i.id}, this.value)"><option>Зарегистрировано</option><option>В работе</option><option>Закрыто</option></select>` : '—'}</td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+    
+    async function addIncident() {
+        const data = {
+            incident_type: document.getElementById('incidentType').value,
+            address: document.getElementById('incidentAddress').value,
+            description: document.getElementById('incidentDesc').value,
+            priority: document.getElementById('incidentPriority').value
+        };
+        if (!data.incident_type || !data.address || !data.description) { alert('Заполните поля'); return; }
+        await api('/api/incidents', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Происшествие создано');
+        document.getElementById('incidentType').value = '';
+        document.getElementById('incidentAddress').value = '';
+        document.getElementById('incidentDesc').value = '';
+        loadIncidents();
+        loadStats();
+    }
+    
+    async function updateIncidentStatus(id, status) {
+        await api(`/api/incidents/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+        showToast(`✅ Статус изменён на "${status}"`);
+        loadIncidents();
+        loadStats();
+    }
+    
+    // ========== КРИМИНАЛ ==========
+    async function loadCriminal() {
+        const criminals = await api('/api/criminal');
+        document.getElementById('criminalList').innerHTML = criminals.map(c => `
+            <tr>
+                <td>${c.id}</td>
+                <td>${c.nickname} (${c.full_name})</td>
+                <td>${c.record_type || '—'}</td>
+                <td>${c.crime_article}</td>
+                <td>${c.sentence_type}${c.sentence_term_years > 0 ? ` ${c.sentence_term_years} лет` : ''}</td>
+                <td>${c.is_active ? '<span class="badge-wanted">⚠️ Активен</span>' : '<span class="badge-success">✅ Погашена</span>'}</td>
+                <td><button class="btn-success" onclick="closeCriminal(${c.id})">✅ Погасить</button></td>
+            </tr>
+        `).join('');
+        loadStats();
+    }
+    
+    async function addCriminal() {
+        const data = {
+            citizen_id: document.getElementById('criminalCitizenId').value,
+            record_type: document.getElementById('criminalType').value,
+            crime_article: document.getElementById('criminalArticle').value,
+            crime_description: document.getElementById('criminalDesc').value,
+            sentence_date: document.getElementById('sentenceDate').value || null,
+            sentence_type: document.getElementById('sentenceType').value,
+            sentence_term_years: parseInt(document.getElementById('sentenceYears').value) || 0
+        };
+        if (!data.citizen_id || !data.crime_article) { alert('Заполните ID и статью'); return; }
+        await api('/api/criminal', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Запись добавлена');
+        document.getElementById('criminalCitizenId').value = '';
+        document.getElementById('criminalArticle').value = '';
+        document.getElementById('criminalDesc').value = '';
+        loadCriminal();
+        loadCitizens();
+        loadStats();
+    }
+    
+    async function closeCriminal(id) {
+        if (!confirm('Погасить судимость/снять с учёта?')) return;
+        await api(`/api/criminal/${id}/close`, { method: 'PUT' });
+        showToast('✅ Запись погашена');
+        loadCriminal();
+        loadCitizens();
+        loadStats();
+    }
+    
+    // ========== ДЕЖУРНЫЙ ==========
+    async function loadDuty() {
+        try {
+            const duty = await api('/api/duty/active');
+            if (duty) {
+                document.getElementById('dutyStatus').innerHTML = `<p><strong>Дежурный:</strong> ${duty.user_id || '—'} | <strong>Server ID:</strong> ${duty.server_id} | <strong>Начало:</strong> ${new Date(duty.started_at).toLocaleString()}</p><button class="btn-danger" onclick="endDuty()">Завершить смену</button>`;
+                document.getElementById('dutyForm').style.display = 'none';
+            } else {
+                document.getElementById('dutyStatus').innerHTML = '<p>Нет активной дежурной смены</p>';
+                document.getElementById('dutyForm').style.display = 'flex';
+            }
+        } catch(e) { console.error(e); }
+    }
+    
+    async function startDuty() {
+        const serverId = document.getElementById('serverId').value;
+        if (!serverId) { alert('Введите Server ID'); return; }
+        await api('/api/duty/start', { method: 'POST', body: JSON.stringify({ server_id: serverId }) });
+        showToast('✅ Смена начата');
+        loadDuty();
+    }
+    
+    async function endDuty() {
+        if (!confirm('Завершить дежурную смену?')) return;
+        await api('/api/duty/end', { method: 'POST' });
+        showToast('✅ Смена завершена');
+        loadDuty();
+    }
+    
+    // ЗАГРУЗКА ПРИ СТАРТЕ
     loadCitizens();
 </script>
 </body>
